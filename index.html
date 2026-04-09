@@ -199,3 +199,17 @@ checkbox.addEventListener('change', function() {
 
 </body>
 </html>
+
+
+<button onclick="nextPage()">Lanjut</button>
+
+<script>
+function nextPage(){
+  document.body.style.transition = "opacity 0.3s ease";
+  document.body.style.opacity = "0";
+
+  setTimeout(() => {
+    window.location.href = "index2.html";
+  }, 300);
+}
+</script>
