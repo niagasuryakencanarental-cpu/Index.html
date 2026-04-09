@@ -1,243 +1,179 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Form Calon Pelanggan</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Form Upload</title>
 
-  <style>
-    body {
-      margin: 0;
-      font-family: Arial;
-      color: #fff;
-      background: linear-gradient(145deg, #2c2c2c, #1a1a1a);
-    }
+<style>
+body {
+  margin: 0;
+  font-family: Arial;
+  color: #fff;
+  background: linear-gradient(145deg, #2c2c2c, #1a1a1a);
+  opacity: 0;
+  transition: opacity 0.3s;
+}
 
-    .frame {
-      height: 100vh;
-      display: flex;
-      flex-direction: column;
-    }
+.header {
+  text-align: center;
+  padding: 12px;
+  background: linear-gradient(90deg, #d4af37, #ffd700);
+  color: #000;
+  font-weight: bold;
+}
 
-    /* HEADER */
-    .header {
-      padding: 12px;
-      text-align: center;
-      font-size: 16px;
-      font-weight: bold;
-      background: linear-gradient(90deg, #d4af37, #ffd700);
-      color: #000;
-    }
+.info {
+  text-align: right;
+  padding: 6px 10px;
+  font-size: 12px;
+  background: rgba(0,0,0,0.4);
+  color: #ffd700;
+}
 
-    /* INFO */
-    .info {
-      text-align: right;
-      font-size: 12px;
-      padding: 6px 10px;
-      background: rgba(0,0,0,0.4);
-      color: #ffd700;
-      line-height: 1.4;
-    }
+.content {
+  padding: 15px;
+}
 
-    .content {
-      flex: 1;
-      overflow-y: auto;
-      padding: 15px;
-    }
+.form-group {
+  background: #2a2a2a;
+  padding: 12px;
+  border-radius: 10px;
+  margin-bottom: 12px;
+}
 
-    /* FORM */
-    .form-group {
-      background: linear-gradient(145deg, #3a3a3a, #2a2a2a);
-      border: 1px solid rgba(255,255,255,0.08);
-      padding: 14px;
-      border-radius: 10px;
-      margin-bottom: 12px;
-    }
+.status {
+  font-size: 12px;
+  color: #00e676;
+  margin-top: 5px;
+}
 
-    .form-group h4 {
-      margin: 0 0 8px;
-      font-size: 15px;
-      font-weight: normal;
-    }
+button {
+  width: 100%;
+  padding: 14px;
+  border-radius: 10px;
+  border: none;
+}
 
-    input[type="file"],
-    select,
-    input[type="text"] {
-      width: 100%;
-      padding: 11px;
-      border-radius: 8px;
-      border: 1px solid #444;
-      background: #1a1a1a;
-      color: #fff;
-      font-size: 14px;
-      box-sizing: border-box;
-    }
+.active {
+  background: linear-gradient(90deg, #d4af37, #ffd700);
+  color: black;
+}
 
-    select { margin-bottom: 6px; }
-
-    /* STATUS */
-    .status {
-      margin-top: 6px;
-      font-size: 12px;
-      color: #00e676;
-    }
-
-    /* FOOTER */
-    .footer {
-      padding: 10px;
-      background: #111;
-    }
-
-    .lanjut {
-      width: 100%;
-      padding: 14px;
-      border-radius: 10px;
-      border: none;
-      font-size: 15px;
-      font-weight: bold;
-    }
-
-    .active {
-      background: linear-gradient(90deg, #d4af37, #ffd700);
-      color: #000;
-    }
-
-    .disabled {
-      background: #444;
-      color: #aaa;
-    }
-
-  </style>
+.disabled {
+  background: #444;
+  color: #aaa;
+}
+</style>
 </head>
 
 <body>
 
-<div class="frame">
+<div class="header">Form Calon Pelanggan</div>
 
-  <!-- HEADER -->
-  <div class="header">
-    Form Calon Pelanggan
+<div class="info">
+  <div id="lokasi">Lokasi: -</div>
+  <div id="time"></div>
+</div>
+
+<div class="content">
+
+  <div class="form-group">
+    Upload KTP
+    <input type="file" id="ktp" accept="image/*" capture="environment">
+    <div id="s1" class="status"></div>
   </div>
 
-  <!-- INFO -->
-  <div class="info">
-    <div id="lokasi">Lokasi: -</div>
-    <div id="time"></div>
+  <div class="form-group">
+    Upload Selfie + KTP
+    <input type="file" id="selfie" accept="image/*" capture="user">
+    <div id="s2" class="status"></div>
   </div>
 
-  <!-- CONTENT -->
-  <div class="content">
+  <div class="form-group">
+    Pilih Dokumen
+    <select id="jenis">
+      <option value="">Pilih</option>
+      <option>KK</option>
+      <option>NPWP</option>
+      <option>ID Kerja</option>
+      <option>BPJS</option>
+    </select>
 
-    <div class="form-group">
-      <h4>1. Upload KTP</h4>
-      <input type="file" id="ktp" accept="image/*" capture="environment">
-      <div id="statusKtp" class="status"></div>
-    </div>
-
-    <div class="form-group">
-      <h4>2. Upload KTP + Selfie</h4>
-      <input type="file" id="selfie" accept="image/*" capture="user">
-      <div id="statusSelfie" class="status"></div>
-    </div>
-
-    <div class="form-group">
-      <h4>3. Upload Data Pendukung</h4>
-
-      <select id="dokumenType">
-        <option value="">Pilih Dokumen</option>
-        <option value="KK">KK</option>
-        <option value="NPWP">NPWP</option>
-        <option value="ID_KERJA">ID Kerja</option>
-        <option value="BPJS">BPJS TK</option>
-      </select>
-
-      <input type="file" id="dokumen" accept="image/*" capture="environment">
-      <div id="statusDokumen" class="status"></div>
-    </div>
-
-    <div class="form-group">
-      <h4>4. Nomor WhatsApp</h4>
-      <input type="text" id="wa" placeholder="+628xxxx">
-      <div id="statusWa" class="status"></div>
-    </div>
-
+    <input type="file" id="dokumen" accept="image/*" capture="environment">
+    <div id="s3" class="status"></div>
   </div>
 
-  <!-- FOOTER -->
-  <div class="footer">
-    <button id="lanjut" class="lanjut disabled" disabled>Lanjutkan</button>
+  <div class="form-group">
+    Nomor WhatsApp
+    <input type="text" id="wa">
+    <div id="s4" class="status"></div>
   </div>
+
+  <button id="lanjut" class="disabled" disabled>Kirim</button>
 
 </div>
 
 <script>
+// 🔐 CEK AKSES
+if(localStorage.getItem("agree") !== "yes"){
+  window.location.href = "index.html";
+}
+
+// fade in
+window.onload = () => {
+  document.body.style.opacity = "1";
+};
+
 let data = {};
 
-// TIME
-setInterval(() => {
-  const now = new Date();
-  time.innerText =
-    now.toLocaleDateString() + " " + now.toLocaleTimeString();
-}, 1000);
+// waktu
+setInterval(()=>{
+  time.innerText = new Date().toLocaleString();
+},1000);
 
-// LOKASI
-navigator.geolocation.getCurrentPosition(pos => {
+// lokasi
+navigator.geolocation.getCurrentPosition(p=>{
   lokasi.innerText =
-    "Lat: " + pos.coords.latitude.toFixed(4) +
-    ", Lng: " + pos.coords.longitude.toFixed(4);
+    "Lat:" + p.coords.latitude.toFixed(3) +
+    " Lng:" + p.coords.longitude.toFixed(3);
 });
 
-// INPUT
-ktp.onchange = () => {
-  data.ktp = ktp.files[0];
-  statusKtp.innerText = "✔ KTP berhasil diupload";
-  cek();
-};
-
-selfie.onchange = () => {
-  data.selfie = selfie.files[0];
-  statusSelfie.innerText = "✔ Selfie berhasil diupload";
-  cek();
-};
+// input
+ktp.onchange = () => { data.ktp=1; s1.innerText="✔ OK"; cek(); };
+selfie.onchange = () => { data.selfie=1; s2.innerText="✔ OK"; cek(); };
 
 dokumen.onchange = () => {
-  if (!dokumenType.value) {
-    alert("Pilih dokumen dulu!");
-    dokumen.value = "";
+  if(!jenis.value){
+    alert("Pilih jenis dokumen!");
     return;
   }
-  data.dokumen = dokumen.files[0];
-  statusDokumen.innerText =
-    "✔ " + dokumenType.value + " berhasil diupload";
+  data.dokumen=1;
+  s3.innerText="✔ "+jenis.value;
   cek();
-};
-
-dokumenType.onchange = () => {
-  data.dokumenType = dokumenType.value;
 };
 
 wa.oninput = () => {
-  data.wa = wa.value;
-  statusWa.innerText =
-    data.wa.length > 8 ? "✔ Nomor valid" : "";
+  data.wa=wa.value;
+  s4.innerText = wa.value.length>8 ? "✔ valid":"";
   cek();
 };
 
-// VALIDASI
+// validasi
 function cek(){
   const valid =
     data.ktp &&
     data.selfie &&
     data.dokumen &&
     data.wa &&
-    data.dokumenType;
+    jenis.value;
 
   lanjut.disabled = !valid;
-  lanjut.className = valid ? "lanjut active" : "lanjut disabled";
+  lanjut.className = valid ? "active":"disabled";
 }
 
-// ACTION
-lanjut.onclick = () => {
-  alert("Semua data lengkap ✅");
+// submit
+lanjut.onclick = ()=>{
+  alert("Data siap dikirim 🔥");
 };
 </script>
 
