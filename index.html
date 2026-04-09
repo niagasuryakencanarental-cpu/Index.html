@@ -2,91 +2,199 @@
 <html lang="id">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>NSKRental</title>
 
-<link href="https://fonts.googleapis.com/css2?family=Exo:wght@400;600;900&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@800;900&family=Montserrat:wght@300;500&display=swap" rel="stylesheet">
 
 <style>
-body{
-  font-family:Arial;
-  background:#000;
-  color:#fff;
-  text-align:center;
-  padding:40px;
+body {
+    margin: 0;
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    background: radial-gradient(circle at top, #1a1a1a, #000);
+    font-family: 'Montserrat', sans-serif;
+    color: white;
 }
 
-.logo{
-  font-family:'Exo';
-  font-weight:900;
-  font-style:italic;
-  font-size:32px;
-  background:linear-gradient(90deg,#fff,#ff7a00,#fff);
-  -webkit-background-clip:text;
-  -webkit-text-fill-color:transparent;
+.container {
+    max-width: 420px;
+    width: 100%;
+    margin-top: 40px;
+    padding: 20px;
+    text-align: center;
 }
 
-input, button{
-  width:90%;
-  margin:10px;
-  padding:12px;
-  border-radius:10px;
-  border:none;
+/* Intro */
+.intro {
+    margin-bottom: 30px;
+    color: #ccc;
+    line-height: 1.5;
 }
 
-button{
-  background:#ff7a00;
-  font-weight:bold;
+/* Title */
+.title {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 42px;
+    font-weight: 900;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+
+    margin-bottom: 12px;
+
+    background: linear-gradient(
+        to bottom,
+        #fff8d6,
+        #d4af37 40%,
+        #b8962e 60%,
+        #fff2a6
+    );
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+
+    text-shadow:
+        0 1px 0 rgba(255,255,255,0.3),
+        0 3px 8px rgba(0,0,0,0.8),
+        0 0 15px rgba(212,175,55,0.5);
+}
+
+/* Tagline */
+.tagline {
+    margin-bottom: 25px;
+    font-size: 14px;
+    letter-spacing: 2px;
+    color: #ffffffcc;
+}
+
+/* Divider */
+.line {
+    width: 110px;
+    height: 2px;
+    background: linear-gradient(to right, transparent, #d4af37, transparent);
+    margin: 0 auto 30px;
+}
+
+/* Info */
+.info {
+    font-size: 13px;
+    color: #aaa;
+    line-height: 1.5;
+
+    /* 🔥 jarak ke checkbox */
+    margin-bottom: 35px;
+}
+
+/* Checkbox kiri */
+.checkbox-container {
+    display: flex;
+    align-items: flex-start;
+    justify-content: flex-start;
+    gap: 8px;
+    font-size: 13px;
+    text-align: left;
+
+    margin-bottom: 30px;
+}
+
+.checkbox-container label {
+    line-height: 1.5;
+}
+
+/* Checkbox */
+input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    accent-color: #d4af37;
+    margin-top: 2px;
+}
+
+/* Button */
+button {
+    width: 100%;
+    padding: 14px;
+    border: none;
+    border-radius: 30px;
+    font-family: 'Orbitron', sans-serif;
+    letter-spacing: 2px;
+    background: #444;
+    color: #aaa;
+    cursor: not-allowed;
+    transition: 0.3s;
+}
+
+button.active {
+    background: linear-gradient(135deg, #d4af37, #b8962e);
+    color: black;
+    cursor: pointer;
+    box-shadow: 0 0 20px rgba(212,175,55,0.7);
+}
+
+button.active:hover {
+    transform: scale(1.03);
+}
+
+/* Desktop */
+@media(min-width:768px){
+    .container {
+        margin-top: 60px;
+    }
+
+    .title {
+        font-size: 58px;
+    }
+
+    .intro {
+        font-size: 18px;
+    }
+
+    .tagline {
+        font-size: 16px;
+    }
 }
 </style>
 </head>
 
 <body>
 
-<h3>Mulailah perjalanan anda bersama</h3>
+<div class="container">
 
-<div class="logo">NSKRental</div>
+    <div class="intro">
+        Mulailah Perjalanan Anda Bersama Kami
+    </div>
 
-<p>Untuk keamanan bersama, kendaraan kami dilengkapi fitur Dashcam</p>
+    <div class="title">NSK RENTAL</div>
 
-<input id="nama" placeholder="Nama">
-<input id="wa" placeholder="WhatsApp">
+    <div class="tagline">
+        Sahabat Perjalanan Anda
+    </div>
 
-<p>Foto KTP</p>
-<input id="ktp" type="file">
+    <div class="line"></div>
 
-<p>Selfie</p>
-<input id="selfie" type="file">
+    <div class="info">
+        Untuk keamanan bersama, kendaraan kami dilengkapi Dashcam
+    </div>
 
-<input type="checkbox" id="c">
-<label for="c">Saya setuju</label>
+    <div class="checkbox-container">
+        <input type="checkbox" id="agree">
+        <label for="agree">
+            Saya setuju dan tidak keberatan dengan fitur Dashcam.
+        </label>
+    </div>
 
-<br>
+    <button id="btn" disabled>Lanjutkan</button>
 
-<button id="btn" disabled onclick="kirim()">Lanjutkan</button>
+</div>
 
 <script>
-const c=document.getElementById("c");
-const b=document.getElementById("btn");
+const checkbox = document.getElementById('agree');
+const button = document.getElementById('btn');
 
-c.onchange=()=>b.disabled=!c.checked;
-
-async function kirim(){
-
-  const form = new FormData();
-
-  form.append("nama", document.getElementById("nama").value);
-  form.append("wa", document.getElementById("wa").value);
-  form.append("ktp", document.getElementById("ktp").files[0]);
-  form.append("selfie", document.getElementById("selfie").files[0]);
-
-  const res = await fetch("https://team-project-flow-niaga-surya.username.repl.co/verifikasi",{
-    method:"POST",
-    body:form
-  });
-
-  alert("Data terkirim 🚀");
-}
+checkbox.addEventListener('change', function() {
+    button.disabled = !this.checked;
+    button.classList.toggle('active', this.checked);
+});
 </script>
 
 </body>
