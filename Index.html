@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NSK Rental</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Exo:wght@400;600;900&display=swap" rel="stylesheet">
+
+<style>
+body{
+  font-family:Arial;
+  background:#000;
+  color:#fff;
+  text-align:center;
+  padding:40px;
+}
+
+.logo{
+  font-family:'Exo';
+  font-weight:900;
+  font-style:italic;
+  font-size:32px;
+  background:linear-gradient(90deg,#fff,#ff7a00,#fff);
+  -webkit-background-clip:text;
+  -webkit-text-fill-color:transparent;
+}
+
+input, button{
+  width:90%;
+  margin:10px;
+  padding:12px;
+  border-radius:10px;
+  border:none;
+}
+
+button{
+  background:#ff7a00;
+  font-weight:bold;
+}
+</style>
+</head>
+
+<body>
+
+<h3>Mulailah perjalanan anda bersama</h3>
+
+<div class="logo">NSKRental</div>
+
+<p>Untuk keamanan bersama, kendaraan kami dilengkapi fitur Dashcam</p>
+
+<input id="nama" placeholder="Nama">
+<input id="wa" placeholder="WhatsApp">
+
+<p>Foto KTP</p>
+<input id="ktp" type="file">
+
+<p>Selfie</p>
+<input id="selfie" type="file">
+
+<input type="checkbox" id="c">
+<label for="c">Saya setuju</label>
+
+<br>
+
+<button id="btn" disabled onclick="kirim()">Lanjutkan</button>
+
+<script>
+const c=document.getElementById("c");
+const b=document.getElementById("btn");
+
+c.onchange=()=>b.disabled=!c.checked;
+
+async function kirim(){
+
+  const form = new FormData();
+
+  form.append("nama", document.getElementById("nama").value);
+  form.append("wa", document.getElementById("wa").value);
+  form.append("ktp", document.getElementById("ktp").files[0]);
+  form.append("selfie", document.getElementById("selfie").files[0]);
+
+  const res = await fetch("https://team-project-flow-niaga-surya.username.repl.co/verifikasi",{
+    method:"POST",
+    body:form
+  });
+
+  alert("Data terkirim 🚀");
+}
+</script>
+
+</body>
+</html>
