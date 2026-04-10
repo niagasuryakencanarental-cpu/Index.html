@@ -9,78 +9,137 @@
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js"></script>
 
 <style>
-body{margin:0;background:#000;color:#fff;font-family:'Orbitron';text-align:center}
+body{
+ margin:0;
+ background:#000;
+ color:#fff;
+ font-family:'Orbitron';
+ text-align:center;
+}
 
 /* FRAME */
 .frame{
- width:85%;max-width:420px;aspect-ratio:10/6;
- border:2mm solid #888;margin:20px auto;border-radius:10px;
- background:#111;display:flex;justify-content:center;align-items:center;position:relative;
+ width:85%;
+ max-width:420px;
+ aspect-ratio:10/6;
+ border:2mm solid #888;
+ margin:20px auto;
+ border-radius:10px;
+ background:#111;
+ display:flex;
+ justify-content:center;
+ align-items:center;
+ position:relative;
 }
-.frame img{width:100%;height:100%;object-fit:cover;display:none}
-.label{position:absolute;color:#00aaff}
+.frame img{
+ width:100%;
+ height:100%;
+ object-fit:cover;
+ display:none;
+}
+.label{
+ position:absolute;
+ color:#00aaff;
+}
 
-/* BUTTON */
-.btn{
- width:85%;max-width:420px;padding:14px;margin:10px auto;
- background:linear-gradient(45deg,#d4af37,#ffd700);
- border:none;color:#000;font-weight:bold;border-radius:8px;
+/* BUTTON FOTO */
+.btn-foto{
+ width:85%;
+ max-width:420px;
+ padding:14px;
+ margin:10px auto;
+ background:linear-gradient(45deg,#003366,#0055aa);
+ color:#000;
+ font-weight:900;
+ border:none;
+ border-radius:8px;
 }
 
 /* FORM */
-.form{display:none}
+.form{display:none;}
 .input{
- width:85%;max-width:420px;padding:10px;margin:5px auto;
- border-radius:6px;border:none;
+ width:85%;
+ max-width:420px;
+ padding:10px;
+ margin:5px auto;
+ border-radius:6px;
+ border:none;
 }
 
 /* CHECKBOX */
 .checkbox{
- display:none;width:85%;max-width:420px;
- margin:10px auto;font-size:12px;text-align:left;
+ display:none;
+ width:85%;
+ max-width:420px;
+ margin:10px auto;
+ font-size:12px;
+ text-align:left;
 }
 
 /* LOADING */
 #loadingScreen{
- position:fixed;top:0;left:0;width:100%;height:100%;
- background:#000;display:none;justify-content:center;align-items:center;
- flex-direction:column;z-index:999;
+ position:fixed;
+ top:0;left:0;
+ width:100%;height:100%;
+ background:#000;
+ display:none;
+ justify-content:center;
+ align-items:center;
+ flex-direction:column;
+ z-index:999;
 }
 .loader{
- border:5px solid #222;border-top:5px solid #00aaff;
- border-radius:50%;width:50px;height:50px;
+ border:5px solid #222;
+ border-top:5px solid #00aaff;
+ border-radius:50%;
+ width:50px;
+ height:50px;
  animation:spin 1s linear infinite;
 }
-@keyframes spin{0%{transform:rotate(0)}100%{transform:rotate(360deg)}}
+@keyframes spin{
+ 0%{transform:rotate(0);}
+ 100%{transform:rotate(360deg);}
+}
 
 /* POPUP */
 #popupSuccess{
- position:fixed;top:0;left:0;width:100%;height:100%;
+ position:fixed;
+ top:0;left:0;
+ width:100%;height:100%;
  background:rgba(0,0,0,0.7);
- display:none;justify-content:center;align-items:center;z-index:1000;
+ display:none;
+ justify-content:center;
+ align-items:center;
 }
 .popup-box{
- background:#111;padding:25px;border-radius:12px;
- width:80%;max-width:320px;text-align:center;
+ background:#111;
+ padding:25px;
+ border-radius:12px;
+ width:80%;
+ max-width:320px;
 }
 #btnLanjut{
- width:100%;padding:12px;
+ width:100%;
+ padding:12px;
  background:linear-gradient(45deg,#007bff,#00aaff);
- color:#000;font-weight:bold;border:none;border-radius:8px;
+ color:#000;
+ font-weight:bold;
+ border:none;
+ border-radius:8px;
 }
 </style>
 </head>
 
 <body>
 
-<h2>Verifikasi Pelanggan</h2>
+<h2>VERIFIKASI KTP</h2>
 
 <div class="frame">
  <img id="preview">
  <div class="label" id="label">FOTO KTP</div>
 </div>
 
-<button class="btn" id="btnFoto">AMBIL FOTO</button>
+<button type="button" class="btn-foto" id="btnFoto">AMBIL FOTO</button>
 
 <div class="form" id="formOCR">
  <input class="input" id="nik" placeholder="NIK">
@@ -118,7 +177,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
 import { getStorage, ref, uploadBytes } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js";
 import { getFirestore, addDoc, collection, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-/* FIREBASE */
+/* FIREBASE CONFIG */
 const firebaseConfig={
  apiKey:"ISI_APIKEY",
  authDomain:"ISI.firebaseapp.com",
@@ -147,8 +206,13 @@ const btnLanjut=document.getElementById("btnLanjut");
 
 let fileBlob=null;
 
-/* OPEN CAMERA */
-btnFoto.addEventListener("click",()=>cameraInput.click());
+/* FIX CAMERA */
+function openCamera(){
+ cameraInput.value="";
+ cameraInput.click();
+}
+
+btnFoto.addEventListener("click", openCamera);
 
 /* FORMAT TTL */
 ttl.addEventListener("input",e=>{
@@ -202,7 +266,7 @@ cameraInput.addEventListener("change",async e=>{
  }
 });
 
-/* AUTO KIRIM */
+/* AUTO UPLOAD */
 check.addEventListener("change",async ()=>{
  if(!check.checked)return;
 
