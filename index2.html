@@ -3,288 +3,228 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Verifikasi KTP</title>
 
-<title>Form Calon Pelanggan</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&display=swap" rel="stylesheet">
 
 <style>
 body {
-  margin:0;
-  font-family: Arial;
-  background:#1a1a1a;
-  color:#fff;
-  opacity:0;
-  transition:0.3s;
+    margin:0;
+    background:#000;
+    color:#fff;
+    font-family:'Orbitron',sans-serif;
+    text-align:center;
 }
 
-.header {
-  padding:16px;
-  text-align:center;
-  background:#000;
-  color:#ffd700;
-  font-weight:900;
-  font-size:20px;
+/* FRAME */
+.frame {
+    width:85%;
+    max-width:420px;
+    aspect-ratio:10/6;
+    border:2mm solid #888;
+    margin:20px auto;
+    border-radius:10px;
+    background:#111;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    position:relative;
 }
 
-.content { padding:15px; }
-
-.form-group {
-  background:#2a2a2a;
-  padding:12px;
-  border-radius:10px;
-  margin-bottom:12px;
+.frame img {
+    width:100%;
+    height:100%;
+    object-fit:cover;
+    display:none;
 }
 
-.status {
-  font-size:12px;
-  font-weight:bold;
-  margin-top:5px;
+.label {
+    position:absolute;
+    color:#00aaff;
+    font-size:16px;
+    letter-spacing:3px;
+    opacity:0.7;
 }
 
-.progress {
-  height:6px;
-  width:0%;
-  background:#ffd700;
-  border-radius:5px;
-  margin-top:5px;
+/* BUTTON */
+.btn {
+    width:85%;
+    max-width:420px;
+    padding:14px;
+    margin:10px auto;
+    background:linear-gradient(45deg,#d4af37,#ffd700);
+    border:none;
+    color:#000;
+    font-weight:bold;
+    border-radius:8px;
 }
 
-button {
-  width:100%;
-  padding:14px;
-  border:none;
-  border-radius:10px;
+.btn-kirim {
+    width:85%;
+    max-width:420px;
+    padding:14px;
+    margin-top:25px;
+    background:linear-gradient(45deg,#005eff,#00aaff);
+    color:#fff;
+    border:none;
+    font-weight:900;
+    letter-spacing:2px;
+    border-radius:8px;
 }
 
-.active {
-  background:#ffd700;
-  color:#000;
-}
-
-.disabled {
-  background:#444;
-  color:#aaa;
+/* NOTIF */
+.notif {
+    margin-top:10px;
+    font-weight:bold;
 }
 </style>
 </head>
 
 <body>
 
-<div class="header">FORM CALON PELANGGAN</div>
+<h2>VERIFIKASI KTP</h2>
 
-<div class="content">
-
-  <div class="form-group">
-    Upload KTP
-    <input type="file" id="ktp" accept="image/*">
-    <div id="p1" class="progress"></div>
-    <div id="s1" class="status"></div>
-  </div>
-
-  <div class="form-group">
-    Upload Selfie
-    <input type="file" id="selfie" accept="image/*">
-    <div id="p2" class="progress"></div>
-    <div id="s2" class="status"></div>
-  </div>
-
-  <div class="form-group">
-    Dokumen Pendukung
-    <select id="jenis">
-      <option value="">Pilih</option>
-      <option>KK</option>
-      <option>NPWP</option>
-      <option>ID Kerja</option>
-    </select>
-    <input type="file" id="dokumen" accept="image/*">
-    <div id="p3" class="progress"></div>
-    <div id="s3" class="status"></div>
-  </div>
-
-  <div class="form-group">
-    Nomor WhatsApp
-    <input type="tel" id="wa" placeholder="08xxxxxxxxxx">
-    <div id="s4" class="status"></div>
-  </div>
-
-  <div class="form-group">
-    <div id="infoLokasi">Mengambil lokasi...</div>
-  </div>
-
-  <button id="lanjut" class="disabled" disabled>Kirim</button>
-
+<div class="frame">
+    <img id="preview">
+    <div class="label" id="label">FOTO KTP</div>
 </div>
+
+<button class="btn" onclick="ambilFoto()">AMBIL FOTO</button>
+<button class="btn-kirim" onclick="kirim()">KIRIM</button>
+
+<div class="notif" id="notif"></div>
+
+<input type="file" id="cameraInput" accept="image/*" capture="environment" hidden>
 
 <script type="module">
 
-/* DEBUG */
-window.onerror = (m)=>alert("ERROR: "+m);
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js";
 
-/* FIREBASE */
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { getFirestore, collection, addDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { getStorage, ref, uploadBytesResumable, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js";
-
+/* CONFIG */
 const firebaseConfig = {
-  apiKey: "AIzaSyAXMiJ8u65ex6D3LtbrzKyEKhAeGtg7Zps",
-  authDomain: "nskrental-bbf87.firebaseapp.com",
-  projectId: "nskrental-bbf87",
-  storageBucket: "nskrental-bbf87.appspot.com",
-  messagingSenderId: "654715207587",
-  appId: "1:654715207587:web:73f5281b0fdcdecf8c6416"
+  apiKey: "ISI_APIKEY",
+  authDomain: "ISI.firebaseapp.com",
+  projectId: "ISI",
+  storageBucket: "ISI.appspot.com",
+  appId: "ISI_APPID"
 };
 
 const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
 const storage = getStorage(app);
 
-/* DOM */
-const el=id=>document.getElementById(id);
+let lat="", lon="";
+let uploadSelesai=false;
+let fileRef=null;
 
-const ktp=el("ktp"), selfie=el("selfie"), dokumen=el("dokumen");
-const jenis=el("jenis"), wa=el("wa");
+/* LOKASI */
+navigator.geolocation.getCurrentPosition(pos=>{
+    lat = pos.coords.latitude;
+    lon = pos.coords.longitude;
+});
 
-const s1=el("s1"), s2=el("s2"), s3=el("s3"), s4=el("s4");
-const p1=el("p1"), p2=el("p2"), p3=el("p3");
+/* AMBIL FOTO */
+window.ambilFoto = ()=>{
+    document.getElementById("cameraInput").click();
+};
 
-const btn=el("lanjut");
-const infoLokasi=el("infoLokasi");
+/* VALIDASI KTP */
+function validasiKTP(img){
+    const canvas = document.createElement("canvas");
+    const ctx = canvas.getContext("2d");
 
-/* STATE */
-let data={};
+    canvas.width = img.width;
+    canvas.height = img.height;
 
-/* LIMIT */
-const MAX=10*1024*1024;
+    ctx.drawImage(img,0,0);
 
-/* WA */
-const clean=v=>v.replace(/\D/g,"");
-const validWA=v=>/^08\d{8,11}$/.test(v);
-const toIntl=v=>v.replace(/^0/,"+62");
+    const data = ctx.getImageData(0,0,canvas.width,canvas.height).data;
 
-/* VALIDASI */
-function cek(){
-  const ok=data.ktp&&data.selfie&&data.dokumen&&data.wa&&jenis.value;
-  btn.disabled=!ok;
-  btn.className=ok?"active":"disabled";
+    let green=0;
+
+    for(let i=0;i<data.length;i+=4){
+        const r=data[i], g=data[i+1], b=data[i+2];
+        if(g>r && g>b && g>100) green++;
+    }
+
+    return (green/(data.length/4)) > 0.1;
 }
 
-/* COMPRESS */
-async function compress(file){
-  return new Promise(res=>{
-    const img=new Image();
-    const reader=new FileReader();
+/* HANDLE FOTO */
+cameraInput.onchange = async e=>{
+    const file = e.target.files[0];
+    if(!file) return;
 
-    reader.onload=e=>img.src=e.target.result;
+    const reader = new FileReader();
 
-    img.onload=()=>{
-      const canvas=document.createElement("canvas");
-      const scale=800/img.width;
+    reader.onload = async e=>{
+        const img = document.getElementById("preview");
+        img.src = e.target.result;
+        img.style.display="block";
+        label.style.display="none";
 
-      canvas.width=800;
-      canvas.height=img.height*scale;
+        notif.innerText="Validasi...";
 
-      const ctx=canvas.getContext("2d");
-      ctx.drawImage(img,0,0,canvas.width,canvas.height);
+        /* VALIDASI */
+        if(!validasiKTP(img)){
+            notif.innerText="❌ Bukan KTP";
+            return;
+        }
 
-      canvas.toBlob(blob=>{
-        res(new File([blob],file.name,{type:"image/jpeg"}));
-      },"image/jpeg",0.7);
+        /* COMPRESS */
+        const canvas = document.createElement("canvas");
+        const ctx = canvas.getContext("2d");
+
+        canvas.width = img.width;
+        canvas.height = img.height;
+        ctx.drawImage(img,0,0);
+
+        let quality=0.9;
+        let dataUrl;
+
+        do{
+            dataUrl = canvas.toDataURL("image/jpeg",quality);
+            quality -=0.1;
+        }while(dataUrl.length>2*1024*1024 && quality>0.3);
+
+        const blob = await (await fetch(dataUrl)).blob();
+
+        if(blob.size>2*1024*1024){
+            notif.innerText="❌ File > 2MB";
+            return;
+        }
+
+        notif.innerText="UPLOADING...";
+
+        const fileName="ktp_"+Date.now()+".jpg";
+        fileRef = ref(storage,fileName);
+
+        await uploadBytes(fileRef,blob,{
+            metadata:{lat,lon}
+        });
+
+        notif.innerText="PROCESSING WATERMARK...";
+
+        setTimeout(async ()=>{
+            const url = await getDownloadURL(fileRef);
+            img.src = url;
+            notif.innerText="UPLOAD SUCCESS";
+            uploadSelesai=true;
+        },4000);
     };
 
     reader.readAsDataURL(file);
-  });
-}
-
-/* UPLOAD */
-async function upload(file,path,status,progress){
-  file=await compress(file);
-
-  return new Promise((res,rej)=>{
-    const task=uploadBytesResumable(ref(storage,path),file);
-
-    task.on("state_changed",snap=>{
-      progress.style.width=(snap.bytesTransferred/snap.totalBytes*100)+"%";
-    },rej,async()=>{
-      status.innerHTML="✔ sukses";
-      status.style.color="#00e676";
-      res(await getDownloadURL(task.snapshot.ref));
-    });
-  });
-}
-
-/* EVENTS */
-ktp.onchange=()=>{
-  const f=ktp.files[0];
-  if(f.size>MAX) return alert("Max 10MB");
-  data.ktp=f; s1.innerText="✔ OK"; cek();
 };
 
-selfie.onchange=()=>{
-  const f=selfie.files[0];
-  if(f.size>MAX) return alert("Max 10MB");
-  data.selfie=f; s2.innerText="✔ OK"; cek();
+/* KIRIM */
+window.kirim = ()=>{
+    if(!uploadSelesai){
+        alert("Belum selesai upload!");
+        return;
+    }
+
+    alert("Data berhasil dikirim!");
 };
-
-dokumen.onchange=()=>{
-  if(!jenis.value) return alert("Pilih dokumen!");
-  const f=dokumen.files[0];
-  if(f.size>MAX) return alert("Max 10MB");
-  data.dokumen=f; s3.innerText="✔ OK"; cek();
-};
-
-wa.oninput=()=>{
-  wa.value=clean(wa.value);
-  if(validWA(wa.value)){
-    data.wa=wa.value;
-    s4.innerHTML="✔ valid";
-    s4.style.color="#00e676";
-  }else{
-    data.wa=null;
-    s4.innerHTML="";
-  }
-  cek();
-};
-
-/* LOCATION */
-navigator.geolocation.getCurrentPosition(pos=>{
-  data.lokasi=`${pos.coords.latitude},${pos.coords.longitude}`;
-  infoLokasi.innerText="📍 "+data.lokasi;
-},()=>{
-  data.lokasi="-";
-  infoLokasi.innerText="Lokasi ditolak";
-});
-
-/* SUBMIT */
-btn.onclick=async()=>{
-  btn.disabled=true;
-
-  try{
-    const t=Date.now();
-
-    const ktpUrl=await upload(data.ktp,"ktp/"+t,s1,p1);
-    const selfieUrl=await upload(data.selfie,"selfie/"+t,s2,p2);
-    const dokUrl=await upload(data.dokumen,"dok/"+t,s3,p3);
-
-    await addDoc(collection(db,"pelanggan"),{
-      wa:toIntl(data.wa),
-      lokasi:data.lokasi,
-      jenis:jenis.value,
-      ktp:ktpUrl,
-      selfie:selfieUrl,
-      dokumen:dokUrl,
-      waktu:new Date()
-    });
-
-    alert("Berhasil 🔥");
-    location.reload();
-
-  }catch(e){
-    alert("Error: "+e.message);
-    btn.disabled=false;
-  }
-};
-
-/* INIT */
-window.onload=()=>document.body.style.opacity="1";
 
 </script>
 
