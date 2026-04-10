@@ -1,29 +1,142 @@
-<script> 
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Persetujuan</title>
+
+<style>
+body {
+  margin: 0;
+  font-family: Arial;
+  background: linear-gradient(145deg, #2c2c2c, #1a1a1a);
+  color: #fff;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+/* container */
+.container {
+  padding: 20px;
+}
+
+.box {
+  background: #2a2a2a;
+  padding: 15px;
+  border-radius: 10px;
+}
+
+button {
+  width: 100%;
+  padding: 14px;
+  margin-top: 15px;
+  border-radius: 10px;
+  border: none;
+}
+
+.active {
+  background: linear-gradient(90deg, #d4af37, #ffd700);
+  color: black;
+}
+
+.disabled {
+  background: #444;
+  color: #aaa;
+}
+
+/* 🔥 LOADING OVERLAY */
+.loading {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0,0,0,0.85);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-direction: column;
+  visibility: hidden;
+  opacity: 0;
+  transition: 0.3s;
+}
+
+.loading.show {
+  visibility: visible;
+  opacity: 1;
+}
+
+.spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid #555;
+  border-top: 4px solid #ffd700;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+  <div class="box">
+    <h3>Persetujuan</h3>
+    <p>Dengan melanjutkan, Anda setuju untuk mengisi data yang diperlukan.</p>
+
+    <label>
+      <input type="checkbox" id="agree"> Saya setuju
+    </label>
+
+    <button id="btn" class="disabled" disabled>Lanjut</button>
+  </div>
+</div>
+
+<!-- 🔥 LOADING -->
+<div id="loading" class="loading">
+  <div class="spinner"></div>
+  <p style="margin-top:10px;">Memproses...</p>
+</div>
+
+<script>
 const checkbox = document.getElementById('agree');
 const button = document.getElementById('btn');
+const loading = document.getElementById('loading');
 
 window.onload = () => {
   document.body.style.opacity = "1";
 };
 
+// auto skip kalau sudah setuju
+if(localStorage.getItem("agree") === "yes"){
+  window.location.href = "index2.html";
+}
+
 // aktifkan tombol
 checkbox.addEventListener('change', function() {
-    button.disabled = !this.checked;
-    button.classList.toggle('active', this.checked);
+  button.disabled = !this.checked;
+  button.className = this.checked ? "active" : "disabled";
 });
 
 // klik lanjut
 button.addEventListener("click", function(){
+  if(button.disabled) return;
 
-    if(button.disabled) return;
+  // simpan status
+  localStorage.setItem("agree", "yes");
 
-    // 🔥 simpan status setuju
-    localStorage.setItem("agree", "yes");
+  // tampilkan loading
+  loading.classList.add("show");
 
-    document.body.style.opacity = "0";
-
-    setTimeout(() => {
-        window.location.href = "index2.html";
-    }, 300);
+  // delay biar kelihatan smooth
+  setTimeout(() => {
+    window.location.href = "index2.html";
+  }, 1200);
 });
 </script>
+
+</body>
+</html>
