@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
 <title>Form Calon Pelanggan</title>
 
 <style>
@@ -16,11 +17,12 @@ body {
 }
 
 .header {
-  padding:12px;
+  padding:16px;
   text-align:center;
-  background:linear-gradient(90deg,#d4af37,#ffd700);
-  color:#000;
-  font-weight:bold;
+  background:#000;
+  color:#ffd700;
+  font-weight:900;
+  font-size:20px;
 }
 
 .content { padding:15px; }
@@ -32,7 +34,19 @@ body {
   margin-bottom:12px;
 }
 
-.status { font-size:12px; color:#00e676; }
+.status {
+  font-size:12px;
+  font-weight:bold;
+  margin-top:5px;
+}
+
+.progress {
+  height:6px;
+  width:0%;
+  background:#ffd700;
+  border-radius:5px;
+  margin-top:5px;
+}
 
 button {
   width:100%;
@@ -41,42 +55,48 @@ button {
   border-radius:10px;
 }
 
-.active { background:linear-gradient(90deg,#d4af37,#ffd700); color:#000; }
-.disabled { background:#444; color:#aaa; }
+.active {
+  background:#ffd700;
+  color:#000;
+}
 
-#progressBox { display:none; margin-top:10px; }
-#progressBar { height:8px; width:0%; background:#ffd700; }
+.disabled {
+  background:#444;
+  color:#aaa;
+}
 </style>
 </head>
 
 <body>
 
-<div class="header">Form Calon Pelanggan</div>
+<div class="header">FORM CALON PELANGGAN</div>
 
 <div class="content">
 
   <div class="form-group">
     Upload KTP
     <input type="file" id="ktp" accept="image/*">
+    <div id="p1" class="progress"></div>
     <div id="s1" class="status"></div>
   </div>
 
   <div class="form-group">
     Upload Selfie
     <input type="file" id="selfie" accept="image/*">
+    <div id="p2" class="progress"></div>
     <div id="s2" class="status"></div>
   </div>
 
   <div class="form-group">
     Dokumen Pendukung
     <select id="jenis">
-      <option value="">Pilih salah satu</option>
+      <option value="">Pilih</option>
       <option>KK</option>
       <option>NPWP</option>
       <option>ID Kerja</option>
-      <option>BPJSTK</option>
     </select>
     <input type="file" id="dokumen" accept="image/*">
+    <div id="p3" class="progress"></div>
     <div id="s3" class="status"></div>
   </div>
 
@@ -87,32 +107,23 @@ button {
   </div>
 
   <div class="form-group">
-    <div id="infoLokasi" style="font-size:12px;color:#ffd700;">
-      Mengambil lokasi...
-    </div>
-  </div>
-
-  <div id="progressBox">
-    <div style="background:#333;border-radius:8px;overflow:hidden;">
-      <div id="progressBar"></div>
-    </div>
+    <div id="infoLokasi">Mengambil lokasi...</div>
   </div>
 
   <button id="lanjut" class="disabled" disabled>Kirim</button>
 
 </div>
 
-<!-- 🔥 SCRIPT DI BAWAH (PENTING) -->
 <script type="module">
 
-/* 🔥 DEBUG (biar gak blank lagi) */
-window.onerror = (m) => alert("ERROR: " + m);
+/* DEBUG */
+window.onerror = (m)=>alert("ERROR: "+m);
 
+/* FIREBASE */
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getFirestore, collection, addDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { getStorage, ref, uploadBytesResumable, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js";
 
-/* FIREBASE CONFIG */
 const firebaseConfig = {
   apiKey: "AIzaSyAXMiJ8u65ex6D3LtbrzKyEKhAeGtg7Zps",
   authDomain: "nskrental-bbf87.firebaseapp.com",
@@ -126,172 +137,154 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const storage = getStorage(app);
 
-/* DOM SAFE */
-const el = (id) => document.getElementById(id);
+/* DOM */
+const el=id=>document.getElementById(id);
 
-const ktp = el("ktp");
-const selfie = el("selfie");
-const dokumen = el("dokumen");
-const jenis = el("jenis");
-const wa = el("wa");
+const ktp=el("ktp"), selfie=el("selfie"), dokumen=el("dokumen");
+const jenis=el("jenis"), wa=el("wa");
 
-const s1 = el("s1");
-const s2 = el("s2");
-const s3 = el("s3");
-const s4 = el("s4");
+const s1=el("s1"), s2=el("s2"), s3=el("s3"), s4=el("s4");
+const p1=el("p1"), p2=el("p2"), p3=el("p3");
 
-const btn = el("lanjut");
-const progressBox = el("progressBox");
-const progressBar = el("progressBar");
-const infoLokasi = el("infoLokasi");
+const btn=el("lanjut");
+const infoLokasi=el("infoLokasi");
 
 /* STATE */
-let data = {};
+let data={};
 
-/* FORMAT WA */
-const clean = v => v.replace(/\D/g,"");
+/* LIMIT */
+const MAX=10*1024*1024;
 
-function formatWA(v){
-  v = clean(v);
-  if(v.startsWith("8")) v="0"+v;
-  if(!v.startsWith("08")) v="08";
-  return v.slice(0,13);
+/* WA */
+const clean=v=>v.replace(/\D/g,"");
+const validWA=v=>/^08\d{8,11}$/.test(v);
+const toIntl=v=>v.replace(/^0/,"+62");
+
+/* VALIDASI */
+function cek(){
+  const ok=data.ktp&&data.selfie&&data.dokumen&&data.wa&&jenis.value;
+  btn.disabled=!ok;
+  btn.className=ok?"active":"disabled";
 }
 
-const validWA = v => /^08\d{8,11}$/.test(v);
-const toIntl = v => v.replace(/^0/,"+62");
+/* COMPRESS */
+async function compress(file){
+  return new Promise(res=>{
+    const img=new Image();
+    const reader=new FileReader();
 
-/* TIME */
-const now = () => new Date().toLocaleString();
+    reader.onload=e=>img.src=e.target.result;
 
-/* LOCATION */
-function getLocation(){
-  if(!navigator.geolocation){
-    infoLokasi.innerText="GPS tidak support";
-    return;
-  }
+    img.onload=()=>{
+      const canvas=document.createElement("canvas");
+      const scale=800/img.width;
 
-  navigator.geolocation.getCurrentPosition(pos=>{
-    const lat = pos.coords.latitude.toFixed(5);
-    const lng = pos.coords.longitude.toFixed(5);
+      canvas.width=800;
+      canvas.height=img.height*scale;
 
-    data.lokasi = `Lat:${lat}, Lng:${lng}`;
-    infoLokasi.innerText = "📍 " + data.lokasi + "\n🕒 " + now();
+      const ctx=canvas.getContext("2d");
+      ctx.drawImage(img,0,0,canvas.width,canvas.height);
 
-  },()=>{
-    infoLokasi.innerText="Lokasi ditolak";
-    data.lokasi = "-";
+      canvas.toBlob(blob=>{
+        res(new File([blob],file.name,{type:"image/jpeg"}));
+      },"image/jpeg",0.7);
+    };
+
+    reader.readAsDataURL(file);
   });
 }
 
 /* UPLOAD */
-function upload(file,path){
-  return new Promise((res,rej)=>{
-    if(!file) return rej(new Error("File kosong"));
+async function upload(file,path,status,progress){
+  file=await compress(file);
 
-    const task = uploadBytesResumable(ref(storage,path),file);
+  return new Promise((res,rej)=>{
+    const task=uploadBytesResumable(ref(storage,path),file);
 
     task.on("state_changed",snap=>{
-      const p = snap.bytesTransferred/snap.totalBytes*100;
-      progressBar.style.width = p+"%";
+      progress.style.width=(snap.bytesTransferred/snap.totalBytes*100)+"%";
     },rej,async()=>{
+      status.innerHTML="✔ sukses";
+      status.style.color="#00e676";
       res(await getDownloadURL(task.snapshot.ref));
     });
   });
 }
 
-/* VALIDASI */
-function cek(){
-  const ok =
-    data.ktp &&
-    data.selfie &&
-    data.dokumen &&
-    data.wa &&
-    jenis.value;
-
-  btn.disabled = !ok;
-  btn.className = ok ? "active":"disabled";
-}
-
 /* EVENTS */
 ktp.onchange=()=>{
-  data.ktp=ktp.files[0];
-  s1.innerText="✔ OK";
-  cek();
+  const f=ktp.files[0];
+  if(f.size>MAX) return alert("Max 10MB");
+  data.ktp=f; s1.innerText="✔ OK"; cek();
 };
 
 selfie.onchange=()=>{
-  data.selfie=selfie.files[0];
-  s2.innerText="✔ OK";
-  cek();
+  const f=selfie.files[0];
+  if(f.size>MAX) return alert("Max 10MB");
+  data.selfie=f; s2.innerText="✔ OK"; cek();
 };
 
 dokumen.onchange=()=>{
-  if(!jenis.value) return alert("Pilih dokumen dulu!");
-  data.dokumen=dokumen.files[0];
-  s3.innerText="✔ "+jenis.value;
-  cek();
+  if(!jenis.value) return alert("Pilih dokumen!");
+  const f=dokumen.files[0];
+  if(f.size>MAX) return alert("Max 10MB");
+  data.dokumen=f; s3.innerText="✔ OK"; cek();
 };
 
 wa.oninput=()=>{
-  wa.value=formatWA(wa.value);
-
+  wa.value=clean(wa.value);
   if(validWA(wa.value)){
     data.wa=wa.value;
-    s4.innerText="✔ valid";
+    s4.innerHTML="✔ valid";
+    s4.style.color="#00e676";
   }else{
     data.wa=null;
-    s4.innerText="";
+    s4.innerHTML="";
   }
-
   cek();
 };
 
+/* LOCATION */
+navigator.geolocation.getCurrentPosition(pos=>{
+  data.lokasi=`${pos.coords.latitude},${pos.coords.longitude}`;
+  infoLokasi.innerText="📍 "+data.lokasi;
+},()=>{
+  data.lokasi="-";
+  infoLokasi.innerText="Lokasi ditolak";
+});
+
 /* SUBMIT */
 btn.onclick=async()=>{
-  if(btn.disabled) return;
-
   btn.disabled=true;
-  btn.innerText="Uploading...";
-  progressBox.style.display="block";
 
   try{
-    const t = Date.now();
-    const waIntl = toIntl(data.wa);
+    const t=Date.now();
 
-    const [ktpUrl,selfieUrl,dokUrl] = await Promise.all([
-      upload(data.ktp,"ktp/"+t),
-      upload(data.selfie,"selfie/"+t),
-      upload(data.dokumen,"dok/"+t)
-    ]);
+    const ktpUrl=await upload(data.ktp,"ktp/"+t,s1,p1);
+    const selfieUrl=await upload(data.selfie,"selfie/"+t,s2,p2);
+    const dokUrl=await upload(data.dokumen,"dok/"+t,s3,p3);
 
     await addDoc(collection(db,"pelanggan"),{
-      waktu:new Date(),
-      waktuText:now(),
-      lokasi:data.lokasi || "-",
-      wa:waIntl,
+      wa:toIntl(data.wa),
+      lokasi:data.lokasi,
       jenis:jenis.value,
       ktp:ktpUrl,
       selfie:selfieUrl,
-      dokumen:dokUrl
+      dokumen:dokUrl,
+      waktu:new Date()
     });
 
     alert("Berhasil 🔥");
     location.reload();
 
   }catch(e){
-    alert("Gagal: " + e.message);
+    alert("Error: "+e.message);
     btn.disabled=false;
-    btn.innerText="Kirim";
-    progressBox.style.display="none";
   }
 };
 
 /* INIT */
-window.onload=()=>{
-  document.body.style.opacity="1";
-  getLocation();
-};
+window.onload=()=>document.body.style.opacity="1";
 
 </script>
 
