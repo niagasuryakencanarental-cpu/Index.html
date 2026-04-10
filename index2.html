@@ -1,15 +1,123 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Form Calon Pelanggan</title>
+
+<style>
+body {
+  margin:0;
+  font-family: Arial;
+  background:#1a1a1a;
+  color:#fff;
+  opacity:0;
+  transition:0.3s;
+}
+
+.header {
+  padding:12px;
+  text-align:center;
+  background:linear-gradient(90deg,#d4af37,#ffd700);
+  color:#000;
+  font-weight:bold;
+}
+
+.content { padding:15px; }
+
+.form-group {
+  background:#2a2a2a;
+  padding:12px;
+  border-radius:10px;
+  margin-bottom:12px;
+}
+
+.status { font-size:12px; color:#00e676; }
+
+button {
+  width:100%;
+  padding:14px;
+  border:none;
+  border-radius:10px;
+}
+
+.active { background:linear-gradient(90deg,#d4af37,#ffd700); color:#000; }
+.disabled { background:#444; color:#aaa; }
+
+#progressBox { display:none; margin-top:10px; }
+#progressBar { height:8px; width:0%; background:#ffd700; }
+</style>
+</head>
+
+<body>
+
+<div class="header">Form Calon Pelanggan</div>
+
+<div class="content">
+
+  <div class="form-group">
+    Upload KTP
+    <input type="file" id="ktp" accept="image/*">
+    <div id="s1" class="status"></div>
+  </div>
+
+  <div class="form-group">
+    Upload Selfie
+    <input type="file" id="selfie" accept="image/*">
+    <div id="s2" class="status"></div>
+  </div>
+
+  <div class="form-group">
+    Dokumen Pendukung
+    <select id="jenis">
+      <option value="">Pilih salah satu</option>
+      <option>KK</option>
+      <option>NPWP</option>
+      <option>ID Kerja</option>
+      <option>BPJSTK</option>
+    </select>
+    <input type="file" id="dokumen" accept="image/*">
+    <div id="s3" class="status"></div>
+  </div>
+
+  <div class="form-group">
+    Nomor WhatsApp
+    <input type="tel" id="wa" placeholder="08xxxxxxxxxx">
+    <div id="s4" class="status"></div>
+  </div>
+
+  <div class="form-group">
+    <div id="infoLokasi" style="font-size:12px;color:#ffd700;">
+      Mengambil lokasi...
+    </div>
+  </div>
+
+  <div id="progressBox">
+    <div style="background:#333;border-radius:8px;overflow:hidden;">
+      <div id="progressBar"></div>
+    </div>
+  </div>
+
+  <button id="lanjut" class="disabled" disabled>Kirim</button>
+
+</div>
+
+<!-- 🔥 SCRIPT DI BAWAH (PENTING) -->
 <script type="module">
+
+/* 🔥 DEBUG (biar gak blank lagi) */
+window.onerror = (m) => alert("ERROR: " + m);
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getFirestore, collection, addDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { getStorage, ref, uploadBytesResumable, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js";
 
-/* ✅ FIX STORAGE BUCKET */
+/* FIREBASE CONFIG */
 const firebaseConfig = {
   apiKey: "AIzaSyAXMiJ8u65ex6D3LtbrzKyEKhAeGtg7Zps",
   authDomain: "nskrental-bbf87.firebaseapp.com",
   projectId: "nskrental-bbf87",
-  storageBucket: "nskrental-bbf87.appspot.com", // ✅ FIX
+  storageBucket: "nskrental-bbf87.appspot.com",
   messagingSenderId: "654715207587",
   appId: "1:654715207587:web:73f5281b0fdcdecf8c6416"
 };
@@ -18,7 +126,7 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const storage = getStorage(app);
 
-/* DOM */
+/* DOM SAFE */
 const el = (id) => document.getElementById(id);
 
 const ktp = el("ktp");
@@ -38,9 +146,9 @@ const progressBar = el("progressBar");
 const infoLokasi = el("infoLokasi");
 
 /* STATE */
-let data = { ktp:null, selfie:null, dokumen:null, wa:null, lokasi:"-" };
+let data = {};
 
-/* WA */
+/* FORMAT WA */
 const clean = v => v.replace(/\D/g,"");
 
 function formatWA(v){
@@ -54,9 +162,7 @@ const validWA = v => /^08\d{8,11}$/.test(v);
 const toIntl = v => v.replace(/^0/,"+62");
 
 /* TIME */
-function now(){
-  return new Date().toLocaleString();
-}
+const now = () => new Date().toLocaleString();
 
 /* LOCATION */
 function getLocation(){
@@ -74,13 +180,14 @@ function getLocation(){
 
   },()=>{
     infoLokasi.innerText="Lokasi ditolak";
+    data.lokasi = "-";
   });
 }
 
 /* UPLOAD */
 function upload(file,path){
   return new Promise((res,rej)=>{
-    if(!file) return rej("File kosong!");
+    if(!file) return rej(new Error("File kosong"));
 
     const task = uploadBytesResumable(ref(storage,path),file);
 
@@ -88,13 +195,12 @@ function upload(file,path){
       const p = snap.bytesTransferred/snap.totalBytes*100;
       progressBar.style.width = p+"%";
     },rej,async()=>{
-      const url = await getDownloadURL(task.snapshot.ref);
-      res(url);
+      res(await getDownloadURL(task.snapshot.ref));
     });
   });
 }
 
-/* VALIDATE */
+/* VALIDASI */
 function cek(){
   const ok =
     data.ktp &&
@@ -121,10 +227,7 @@ selfie.onchange=()=>{
 };
 
 dokumen.onchange=()=>{
-  if(!jenis.value){
-    alert("Pilih dokumen dulu!");
-    return;
-  }
+  if(!jenis.value) return alert("Pilih dokumen dulu!");
   data.dokumen=dokumen.files[0];
   s3.innerText="✔ "+jenis.value;
   cek();
@@ -146,7 +249,6 @@ wa.oninput=()=>{
 
 /* SUBMIT */
 btn.onclick=async()=>{
-
   if(btn.disabled) return;
 
   btn.disabled=true;
@@ -154,7 +256,6 @@ btn.onclick=async()=>{
   progressBox.style.display="block";
 
   try{
-
     const t = Date.now();
     const waIntl = toIntl(data.wa);
 
@@ -167,7 +268,7 @@ btn.onclick=async()=>{
     await addDoc(collection(db,"pelanggan"),{
       waktu:new Date(),
       waktuText:now(),
-      lokasi:data.lokasi,
+      lokasi:data.lokasi || "-",
       wa:waIntl,
       jenis:jenis.value,
       ktp:ktpUrl,
@@ -179,9 +280,7 @@ btn.onclick=async()=>{
     location.reload();
 
   }catch(e){
-    console.error("ERROR:", e);
     alert("Gagal: " + e.message);
-
     btn.disabled=false;
     btn.innerText="Kirim";
     progressBox.style.display="none";
@@ -195,3 +294,6 @@ window.onload=()=>{
 };
 
 </script>
+
+</body>
+</html>
