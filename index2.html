@@ -1,8 +1,8 @@
-<!DOCTYPE html>
+    <!DOCTYPE html>
 <html>
 <head>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Form Upload</title>
+<title>Form Calon Pelanggan</title>
 
 <style>
 body {
@@ -10,6 +10,8 @@ body {
   font-family: Arial;
   background:#1a1a1a;
   color:#fff;
+  opacity:0;
+  transition:0.3s;
 }
 
 .header {
@@ -37,18 +39,29 @@ body {
 button {
   width:100%;
   padding:14px;
-  border-radius:10px;
   border:none;
+  border-radius:10px;
 }
 
 .active {
   background:linear-gradient(90deg,#d4af37,#ffd700);
-  color:black;
+  color:#000;
 }
 
 .disabled {
   background:#444;
   color:#aaa;
+}
+
+#progressBox {
+  display:none;
+  margin-top:10px;
+}
+
+#progressBar {
+  height:8px;
+  width:0%;
+  background:#ffd700;
 }
 </style>
 </head>
@@ -72,27 +85,34 @@ button {
   </div>
 
   <div class="form-group">
-    Pilih Dokumen
+    Dokumen Pendukung
     <select id="jenis">
-      <option value="">Pilih</option>
+      <option value="">Pilih salah satu</option>
       <option>KK</option>
       <option>NPWP</option>
+      <option>ID Kerja</option>
+      <option>BPJSTK</option>
     </select>
 
-    <input type="file" id="dokumen">
+    <input type="file" id="dokumen" accept="image/*">
     <div id="s3" class="status"></div>
   </div>
 
   <div class="form-group">
-    Nomor WA
+    Nomor WhatsApp
     <input type="tel" id="wa" placeholder="08xxxxxxxxxx">
     <div id="s4" class="status"></div>
   </div>
 
-  <!-- ✅ PROGRESS FIX -->
-  <div id="progressBox" style="display:none;">
-    <div style="background:#333;border-radius:8px;">
-      <div id="progressBar" style="height:8px;width:0%;background:#ffd700;"></div>
+  <div class="form-group">
+    <div id="infoLokasi" style="font-size:12px;color:#ffd700;">
+      Mengambil lokasi...
+    </div>
+  </div>
+
+  <div id="progressBox">
+    <div style="background:#333;border-radius:8px;overflow:hidden;">
+      <div id="progressBar"></div>
     </div>
   </div>
 
@@ -101,8 +121,9 @@ button {
 </div>
 
 <script type="module">
+
 /* =========================
-   🔥 FIREBASE
+   FIREBASE
 ========================= */
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getFirestore, collection, addDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
@@ -122,76 +143,71 @@ const db = getFirestore(app);
 const storage = getStorage(app);
 
 /* =========================
-   🔥 DOM FIX (INI YANG TADI ERROR)
+   DOM
 ========================= */
-const ktp = document.getElementById("ktp");
-const selfie = document.getElementById("selfie");
-const dokumen = document.getElementById("dokumen");
-const jenis = document.getElementById("jenis");
-const waInput = document.getElementById("wa");
+const el = (id) => document.getElementById(id);
 
-const s1 = document.getElementById("s1");
-const s2 = document.getElementById("s2");
-const s3 = document.getElementById("s3");
-const s4 = document.getElementById("s4");
+const ktp = el("ktp");
+const selfie = el("selfie");
+const dokumen = el("dokumen");
+const jenis = el("jenis");
+const wa = el("wa");
 
-const lanjut = document.getElementById("lanjut");
-const progressBox = document.getElementById("progressBox");
-const progressBar = document.getElementById("progressBar");
+const s1 = el("s1");
+const s2 = el("s2");
+const s3 = el("s3");
+const s4 = el("s4");
+
+const btn = el("lanjut");
+const progressBox = el("progressBox");
+const progressBar = el("progressBar");
+const infoLokasi = el("infoLokasi");
 
 /* =========================
    STATE
 ========================= */
-let data = {};
+let data = { ktp:null, selfie:null, dokumen:null, wa:null, lokasi:"-" };
 
 /* =========================
    WA FORMAT
 ========================= */
-const formatWA = v => {
-  v = v.replace(/\D/g,'');
-  if(v.startsWith("8")) v = "0"+v;
+const clean = v => v.replace(/\D/g,"");
+
+function formatWA(v){
+  v = clean(v);
+  if(v.startsWith("8")) v="0"+v;
   if(!v.startsWith("08")) v="08";
   return v.slice(0,13);
-};
+}
 
 const validWA = v => /^08\d{8,11}$/.test(v);
 const toIntl = v => v.replace(/^0/,"+62");
 
 /* =========================
-   EVENT
+   TIME + LOCATION
 ========================= */
-ktp.onchange = () => { data.ktp=ktp.files[0]; s1.innerText="✔"; cek(); };
-selfie.onchange = () => { data.selfie=selfie.files[0]; s2.innerText="✔"; cek(); };
+function now(){
+  return new Date().toLocaleString();
+}
 
-dokumen.onchange = () => {
-  if(!jenis.value) return alert("Pilih jenis!");
-  data.dokumen=dokumen.files[0];
-  s3.innerText="✔ "+jenis.value;
-  cek();
-};
-
-waInput.oninput = () => {
-  waInput.value = formatWA(waInput.value);
-  if(validWA(waInput.value)){
-    data.wa = waInput.value;
-    s4.innerText="✔ valid";
-  } else {
-    data.wa=null;
-    s4.innerText="";
+function getLocation(){
+  if(!navigator.geolocation){
+    infoLokasi.innerText="GPS tidak support";
+    return;
   }
-  cek();
-};
 
-function cek(){
-  const valid =
-    data.ktp &&
-    data.selfie &&
-    data.dokumen &&
-    data.wa &&
-    jenis.value;
+  navigator.geolocation.getCurrentPosition(pos=>{
+    const lat = pos.coords.latitude.toFixed(5);
+    const lng = pos.coords.longitude.toFixed(5);
 
-  lanjut.disabled=!valid;
-  lanjut.className = valid ? "active":"disabled";
+    data.lokasi = `Lat:${lat}, Lng:${lng}`;
+
+    infoLokasi.innerText =
+      "📍 " + data.lokasi + "\n🕒 " + now();
+
+  },()=>{
+    infoLokasi.innerText="Lokasi ditolak";
+  });
 }
 
 /* =========================
@@ -202,35 +218,92 @@ function upload(file,path){
     const task = uploadBytesResumable(ref(storage,path),file);
 
     task.on("state_changed",snap=>{
-      let p = snap.bytesTransferred/snap.totalBytes*100;
+      const p = snap.bytesTransferred/snap.totalBytes*100;
       progressBar.style.width = p+"%";
-    },rej, async()=>{
+    },rej,async()=>{
       res(await getDownloadURL(task.snapshot.ref));
     });
   });
 }
 
 /* =========================
+   VALIDATE
+========================= */
+function cek(){
+  const ok =
+    data.ktp &&
+    data.selfie &&
+    data.dokumen &&
+    data.wa &&
+    jenis.value;
+
+  btn.disabled = !ok;
+  btn.className = ok ? "active":"disabled";
+}
+
+/* =========================
+   EVENTS
+========================= */
+ktp.onchange=()=>{
+  data.ktp=ktp.files[0];
+  s1.innerText="✔ OK";
+  cek();
+};
+
+selfie.onchange=()=>{
+  data.selfie=selfie.files[0];
+  s2.innerText="✔ OK";
+  cek();
+};
+
+dokumen.onchange=()=>{
+  if(!jenis.value) return alert("Pilih dokumen!");
+  data.dokumen=dokumen.files[0];
+  s3.innerText="✔ "+jenis.value;
+  cek();
+};
+
+wa.oninput=()=>{
+  wa.value=formatWA(wa.value);
+
+  if(validWA(wa.value)){
+    data.wa=wa.value;
+    s4.innerText="✔ valid";
+  }else{
+    data.wa=null;
+    s4.innerText="";
+  }
+
+  cek();
+};
+
+/* =========================
    SUBMIT
 ========================= */
-lanjut.onclick = async ()=>{
-  if(lanjut.disabled) return;
+btn.onclick=async()=>{
 
-  lanjut.disabled=true;
+  if(btn.disabled) return;
+
+  btn.disabled=true;
+  btn.innerText="Uploading...";
   progressBox.style.display="block";
 
   try{
-    const wa = toIntl(data.wa);
 
     const t = Date.now();
+    const waIntl = toIntl(data.wa);
 
-    const ktpUrl = await upload(data.ktp,"ktp/"+t);
-    const selfieUrl = await upload(data.selfie,"selfie/"+t);
-    const dokUrl = await upload(data.dokumen,"dok/"+t);
+    const [ktpUrl,selfieUrl,dokUrl] = await Promise.all([
+      upload(data.ktp,"ktp/"+t),
+      upload(data.selfie,"selfie/"+t),
+      upload(data.dokumen,"dok/"+t)
+    ]);
 
     await addDoc(collection(db,"pelanggan"),{
       waktu:new Date(),
-      wa,
+      waktuText:now(),
+      lokasi:data.lokasi,
+      wa:waIntl,
       jenis:jenis.value,
       ktp:ktpUrl,
       selfie:selfieUrl,
@@ -243,9 +316,21 @@ lanjut.onclick = async ()=>{
   }catch(e){
     console.error(e);
     alert("Gagal ❌");
-    lanjut.disabled=false;
+
+    btn.disabled=false;
+    btn.innerText="Kirim";
+    progressBox.style.display="none";
   }
 };
+
+/* =========================
+   INIT
+========================= */
+window.onload=()=>{
+  document.body.style.opacity="1";
+  getLocation();
+};
+
 </script>
 
 </body>
