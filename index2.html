@@ -1,139 +1,15 @@
-    <!DOCTYPE html>
-<html>
-<head>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Form Calon Pelanggan</title>
-
-<style>
-body {
-  margin:0;
-  font-family: Arial;
-  background:#1a1a1a;
-  color:#fff;
-  opacity:0;
-  transition:0.3s;
-}
-
-.header {
-  padding:12px;
-  text-align:center;
-  background:linear-gradient(90deg,#d4af37,#ffd700);
-  color:#000;
-  font-weight:bold;
-}
-
-.content { padding:15px; }
-
-.form-group {
-  background:#2a2a2a;
-  padding:12px;
-  border-radius:10px;
-  margin-bottom:12px;
-}
-
-.status {
-  font-size:12px;
-  color:#00e676;
-}
-
-button {
-  width:100%;
-  padding:14px;
-  border:none;
-  border-radius:10px;
-}
-
-.active {
-  background:linear-gradient(90deg,#d4af37,#ffd700);
-  color:#000;
-}
-
-.disabled {
-  background:#444;
-  color:#aaa;
-}
-
-#progressBox {
-  display:none;
-  margin-top:10px;
-}
-
-#progressBar {
-  height:8px;
-  width:0%;
-  background:#ffd700;
-}
-</style>
-</head>
-
-<body>
-
-<div class="header">Form Calon Pelanggan</div>
-
-<div class="content">
-
-  <div class="form-group">
-    Upload KTP
-    <input type="file" id="ktp" accept="image/*">
-    <div id="s1" class="status"></div>
-  </div>
-
-  <div class="form-group">
-    Upload Selfie
-    <input type="file" id="selfie" accept="image/*">
-    <div id="s2" class="status"></div>
-  </div>
-
-  <div class="form-group">
-    Dokumen Pendukung
-    <select id="jenis">
-      <option value="">Pilih salah satu</option>
-      <option>KK</option>
-      <option>NPWP</option>
-      <option>ID Kerja</option>
-      <option>BPJSTK</option>
-    </select>
-
-    <input type="file" id="dokumen" accept="image/*">
-    <div id="s3" class="status"></div>
-  </div>
-
-  <div class="form-group">
-    Nomor WhatsApp
-    <input type="tel" id="wa" placeholder="08xxxxxxxxxx">
-    <div id="s4" class="status"></div>
-  </div>
-
-  <div class="form-group">
-    <div id="infoLokasi" style="font-size:12px;color:#ffd700;">
-      Mengambil lokasi...
-    </div>
-  </div>
-
-  <div id="progressBox">
-    <div style="background:#333;border-radius:8px;overflow:hidden;">
-      <div id="progressBar"></div>
-    </div>
-  </div>
-
-  <button id="lanjut" class="disabled" disabled>Kirim</button>
-
-</div>
-
 <script type="module">
 
-/* =========================
-   FIREBASE
-========================= */
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getFirestore, collection, addDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { getStorage, ref, uploadBytesResumable, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js";
 
+/* ✅ FIX STORAGE BUCKET */
 const firebaseConfig = {
   apiKey: "AIzaSyAXMiJ8u65ex6D3LtbrzKyEKhAeGtg7Zps",
   authDomain: "nskrental-bbf87.firebaseapp.com",
   projectId: "nskrental-bbf87",
-  storageBucket: "nskrental-bbf87.firebasestorage.app",
+  storageBucket: "nskrental-bbf87.appspot.com", // ✅ FIX
   messagingSenderId: "654715207587",
   appId: "1:654715207587:web:73f5281b0fdcdecf8c6416"
 };
@@ -142,9 +18,7 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const storage = getStorage(app);
 
-/* =========================
-   DOM
-========================= */
+/* DOM */
 const el = (id) => document.getElementById(id);
 
 const ktp = el("ktp");
@@ -163,14 +37,10 @@ const progressBox = el("progressBox");
 const progressBar = el("progressBar");
 const infoLokasi = el("infoLokasi");
 
-/* =========================
-   STATE
-========================= */
+/* STATE */
 let data = { ktp:null, selfie:null, dokumen:null, wa:null, lokasi:"-" };
 
-/* =========================
-   WA FORMAT
-========================= */
+/* WA */
 const clean = v => v.replace(/\D/g,"");
 
 function formatWA(v){
@@ -183,13 +53,12 @@ function formatWA(v){
 const validWA = v => /^08\d{8,11}$/.test(v);
 const toIntl = v => v.replace(/^0/,"+62");
 
-/* =========================
-   TIME + LOCATION
-========================= */
+/* TIME */
 function now(){
   return new Date().toLocaleString();
 }
 
+/* LOCATION */
 function getLocation(){
   if(!navigator.geolocation){
     infoLokasi.innerText="GPS tidak support";
@@ -201,34 +70,31 @@ function getLocation(){
     const lng = pos.coords.longitude.toFixed(5);
 
     data.lokasi = `Lat:${lat}, Lng:${lng}`;
-
-    infoLokasi.innerText =
-      "📍 " + data.lokasi + "\n🕒 " + now();
+    infoLokasi.innerText = "📍 " + data.lokasi + "\n🕒 " + now();
 
   },()=>{
     infoLokasi.innerText="Lokasi ditolak";
   });
 }
 
-/* =========================
-   UPLOAD
-========================= */
+/* UPLOAD */
 function upload(file,path){
   return new Promise((res,rej)=>{
+    if(!file) return rej("File kosong!");
+
     const task = uploadBytesResumable(ref(storage,path),file);
 
     task.on("state_changed",snap=>{
       const p = snap.bytesTransferred/snap.totalBytes*100;
       progressBar.style.width = p+"%";
     },rej,async()=>{
-      res(await getDownloadURL(task.snapshot.ref));
+      const url = await getDownloadURL(task.snapshot.ref);
+      res(url);
     });
   });
 }
 
-/* =========================
-   VALIDATE
-========================= */
+/* VALIDATE */
 function cek(){
   const ok =
     data.ktp &&
@@ -241,9 +107,7 @@ function cek(){
   btn.className = ok ? "active":"disabled";
 }
 
-/* =========================
-   EVENTS
-========================= */
+/* EVENTS */
 ktp.onchange=()=>{
   data.ktp=ktp.files[0];
   s1.innerText="✔ OK";
@@ -257,7 +121,10 @@ selfie.onchange=()=>{
 };
 
 dokumen.onchange=()=>{
-  if(!jenis.value) return alert("Pilih dokumen!");
+  if(!jenis.value){
+    alert("Pilih dokumen dulu!");
+    return;
+  }
   data.dokumen=dokumen.files[0];
   s3.innerText="✔ "+jenis.value;
   cek();
@@ -277,9 +144,7 @@ wa.oninput=()=>{
   cek();
 };
 
-/* =========================
-   SUBMIT
-========================= */
+/* SUBMIT */
 btn.onclick=async()=>{
 
   if(btn.disabled) return;
@@ -314,8 +179,8 @@ btn.onclick=async()=>{
     location.reload();
 
   }catch(e){
-    console.error(e);
-    alert("Gagal ❌");
+    console.error("ERROR:", e);
+    alert("Gagal: " + e.message);
 
     btn.disabled=false;
     btn.innerText="Kirim";
@@ -323,15 +188,10 @@ btn.onclick=async()=>{
   }
 };
 
-/* =========================
-   INIT
-========================= */
+/* INIT */
 window.onload=()=>{
   document.body.style.opacity="1";
   getLocation();
 };
 
 </script>
-
-</body>
-</html>
