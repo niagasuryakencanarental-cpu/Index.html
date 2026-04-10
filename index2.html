@@ -1,6 +1,108 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Form Upload</title>
+
+<style>
+body {
+  margin:0;
+  font-family: Arial;
+  background:#1a1a1a;
+  color:#fff;
+}
+
+.header {
+  padding:12px;
+  text-align:center;
+  background:linear-gradient(90deg,#d4af37,#ffd700);
+  color:#000;
+  font-weight:bold;
+}
+
+.content { padding:15px; }
+
+.form-group {
+  background:#2a2a2a;
+  padding:12px;
+  border-radius:10px;
+  margin-bottom:12px;
+}
+
+.status {
+  font-size:12px;
+  color:#00e676;
+}
+
+button {
+  width:100%;
+  padding:14px;
+  border-radius:10px;
+  border:none;
+}
+
+.active {
+  background:linear-gradient(90deg,#d4af37,#ffd700);
+  color:black;
+}
+
+.disabled {
+  background:#444;
+  color:#aaa;
+}
+</style>
+</head>
+
+<body>
+
+<div class="header">Form Calon Pelanggan</div>
+
+<div class="content">
+
+  <div class="form-group">
+    Upload KTP
+    <input type="file" id="ktp" accept="image/*">
+    <div id="s1" class="status"></div>
+  </div>
+
+  <div class="form-group">
+    Upload Selfie
+    <input type="file" id="selfie" accept="image/*">
+    <div id="s2" class="status"></div>
+  </div>
+
+  <div class="form-group">
+    Pilih Dokumen
+    <select id="jenis">
+      <option value="">Pilih</option>
+      <option>KK</option>
+      <option>NPWP</option>
+    </select>
+
+    <input type="file" id="dokumen">
+    <div id="s3" class="status"></div>
+  </div>
+
+  <div class="form-group">
+    Nomor WA
+    <input type="tel" id="wa" placeholder="08xxxxxxxxxx">
+    <div id="s4" class="status"></div>
+  </div>
+
+  <!-- ✅ PROGRESS FIX -->
+  <div id="progressBox" style="display:none;">
+    <div style="background:#333;border-radius:8px;">
+      <div id="progressBar" style="height:8px;width:0%;background:#ffd700;"></div>
+    </div>
+  </div>
+
+  <button id="lanjut" class="disabled" disabled>Kirim</button>
+
+</div>
+
 <script type="module">
 /* =========================
-   FIREBASE SETUP
+   🔥 FIREBASE
 ========================= */
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getFirestore, collection, addDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
@@ -20,102 +122,67 @@ const db = getFirestore(app);
 const storage = getStorage(app);
 
 /* =========================
-   DOM
+   🔥 DOM FIX (INI YANG TADI ERROR)
 ========================= */
-const el = id => document.getElementById(id);
+const ktp = document.getElementById("ktp");
+const selfie = document.getElementById("selfie");
+const dokumen = document.getElementById("dokumen");
+const jenis = document.getElementById("jenis");
+const waInput = document.getElementById("wa");
 
-const lanjut = el("lanjut");
-const waInput = el("wa");
-const progressBox = el("progressBox");
-const progressBar = el("progressBar");
+const s1 = document.getElementById("s1");
+const s2 = document.getElementById("s2");
+const s3 = document.getElementById("s3");
+const s4 = document.getElementById("s4");
+
+const lanjut = document.getElementById("lanjut");
+const progressBox = document.getElementById("progressBox");
+const progressBar = document.getElementById("progressBar");
 
 /* =========================
    STATE
 ========================= */
-let data = {
-  ktp: null,
-  selfie: null,
-  dokumen: null,
-  wa: null
-};
+let data = {};
 
 /* =========================
-   SECURITY CHECK
+   WA FORMAT
 ========================= */
-if(localStorage.getItem("agree") !== "yes"){
-  window.location.href = "index.html";
-}
-
-/* =========================
-   INIT
-========================= */
-window.onload = () => document.body.style.opacity = "1";
-
-/* =========================
-   UTIL - WA
-========================= */
-const onlyNumber = v => v.replace(/\D/g, "");
-
 const formatWA = v => {
-  v = onlyNumber(v);
-  if (v.startsWith("8")) v = "0" + v;
-  if (!v.startsWith("08")) v = "08";
+  v = v.replace(/\D/g,'');
+  if(v.startsWith("8")) v = "0"+v;
+  if(!v.startsWith("08")) v="08";
   return v.slice(0,13);
 };
 
-const isValidWA = v => /^08\d{8,11}$/.test(v);
-const toIntl = v => v.replace(/^0/, "+62");
+const validWA = v => /^08\d{8,11}$/.test(v);
+const toIntl = v => v.replace(/^0/,"+62");
 
 /* =========================
-   UTIL - IMAGE COMPRESS
+   EVENT
 ========================= */
-const compressImage = (file, quality = 0.7) => new Promise(resolve => {
-  const img = new Image();
-  const reader = new FileReader();
+ktp.onchange = () => { data.ktp=ktp.files[0]; s1.innerText="✔"; cek(); };
+selfie.onchange = () => { data.selfie=selfie.files[0]; s2.innerText="✔"; cek(); };
 
-  reader.onload = e => img.src = e.target.result;
+dokumen.onchange = () => {
+  if(!jenis.value) return alert("Pilih jenis!");
+  data.dokumen=dokumen.files[0];
+  s3.innerText="✔ "+jenis.value;
+  cek();
+};
 
-  img.onload = () => {
-    const canvas = document.createElement("canvas");
-    let w = img.width, h = img.height;
+waInput.oninput = () => {
+  waInput.value = formatWA(waInput.value);
+  if(validWA(waInput.value)){
+    data.wa = waInput.value;
+    s4.innerText="✔ valid";
+  } else {
+    data.wa=null;
+    s4.innerText="";
+  }
+  cek();
+};
 
-    if (w > 1280) {
-      h *= 1280 / w;
-      w = 1280;
-    }
-
-    canvas.width = w;
-    canvas.height = h;
-
-    canvas.getContext("2d").drawImage(img, 0, 0, w, h);
-    canvas.toBlob(blob => resolve(blob), "image/jpeg", quality);
-  };
-
-  reader.readAsDataURL(file);
-});
-
-/* =========================
-   UTIL - UPLOAD
-========================= */
-const uploadFile = (file, path) => new Promise((resolve, reject) => {
-  const task = uploadBytesResumable(ref(storage, path), file);
-
-  task.on("state_changed",
-    snap => {
-      const progress = (snap.bytesTransferred / snap.totalBytes) * 100;
-      progressBar.style.width = progress + "%";
-    },
-    reject,
-    async () => resolve(await getDownloadURL(task.snapshot.ref))
-  );
-});
-
-/* =========================
-   UI UPDATE
-========================= */
-const setStatus = (id, text) => el(id).innerText = text;
-
-const updateButton = () => {
+function cek(){
   const valid =
     data.ktp &&
     data.selfie &&
@@ -123,99 +190,63 @@ const updateButton = () => {
     data.wa &&
     jenis.value;
 
-  lanjut.disabled = !valid;
-  lanjut.className = valid ? "active" : "disabled";
-};
+  lanjut.disabled=!valid;
+  lanjut.className = valid ? "active":"disabled";
+}
 
 /* =========================
-   EVENTS
+   UPLOAD
 ========================= */
+function upload(file,path){
+  return new Promise((res,rej)=>{
+    const task = uploadBytesResumable(ref(storage,path),file);
 
-// FILE INPUT
-ktp.onchange = () => {
-  data.ktp = ktp.files[0];
-  setStatus("s1", "✔ OK");
-  updateButton();
-};
-
-selfie.onchange = () => {
-  data.selfie = selfie.files[0];
-  setStatus("s2", "✔ OK");
-  updateButton();
-};
-
-dokumen.onchange = () => {
-  if(!jenis.value){
-    alert("Pilih jenis dokumen!");
-    return;
-  }
-  data.dokumen = dokumen.files[0];
-  setStatus("s3", "✔ " + jenis.value);
-  updateButton();
-};
-
-// WA INPUT
-waInput.addEventListener("input", () => {
-  waInput.value = formatWA(waInput.value);
-
-  if(isValidWA(waInput.value)){
-    data.wa = waInput.value;
-    setStatus("s4", "✔ valid");
-  } else {
-    data.wa = null;
-    setStatus("s4", "");
-  }
-
-  updateButton();
-});
+    task.on("state_changed",snap=>{
+      let p = snap.bytesTransferred/snap.totalBytes*100;
+      progressBar.style.width = p+"%";
+    },rej, async()=>{
+      res(await getDownloadURL(task.snapshot.ref));
+    });
+  });
+}
 
 /* =========================
    SUBMIT
 ========================= */
-lanjut.onclick = async () => {
+lanjut.onclick = async ()=>{
   if(lanjut.disabled) return;
 
-  lanjut.disabled = true;
-  lanjut.innerText = "Processing...";
-  progressBox.style.display = "block";
+  lanjut.disabled=true;
+  progressBox.style.display="block";
 
-  try {
+  try{
     const wa = toIntl(data.wa);
 
-    const [ktpC, selfieC, dokC] = await Promise.all([
-      compressImage(data.ktp),
-      compressImage(data.selfie),
-      compressImage(data.dokumen)
-    ]);
+    const t = Date.now();
 
-    const timestamp = Date.now();
+    const ktpUrl = await upload(data.ktp,"ktp/"+t);
+    const selfieUrl = await upload(data.selfie,"selfie/"+t);
+    const dokUrl = await upload(data.dokumen,"dok/"+t);
 
-    const [ktpUrl, selfieUrl, dokUrl] = await Promise.all([
-      uploadFile(ktpC, "ktp/" + timestamp),
-      uploadFile(selfieC, "selfie/" + timestamp),
-      uploadFile(dokC, "dokumen/" + timestamp)
-    ]);
-
-    await addDoc(collection(db, "pelanggan"), {
-      waktu: new Date(),
+    await addDoc(collection(db,"pelanggan"),{
+      waktu:new Date(),
       wa,
-      lokasi: lokasi.innerText,
-      jenis: jenis.value,
-      ktp: ktpUrl,
-      selfie: selfieUrl,
-      dokumen: dokUrl
+      jenis:jenis.value,
+      ktp:ktpUrl,
+      selfie:selfieUrl,
+      dokumen:dokUrl
     });
 
     alert("Berhasil 🔥");
     location.reload();
 
-  } catch (err) {
-    console.error(err);
+  }catch(e){
+    console.error(e);
     alert("Gagal ❌");
-
-    lanjut.disabled = false;
-    lanjut.innerText = "Kirim";
-    progressBox.style.display = "none";
+    lanjut.disabled=false;
   }
 };
 </script>
+
+</body>
+</html>
