@@ -1,165 +1,121 @@
-<!DOCTYPE html>
-<html>
-<head>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Form Upload</title>
+<script type="module">
+/* =========================
+   FIREBASE SETUP
+========================= */
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getFirestore, collection, addDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { getStorage, ref, uploadBytesResumable, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js";
 
-<style>
-body {
-  margin: 0;
-  font-family: Arial;
-  color: #fff;
-  background: linear-gradient(145deg, #2c2c2c, #1a1a1a);
-  opacity: 0;
-  transition: opacity 0.3s;
-}
+const firebaseConfig = {
+  apiKey: "AIzaSyAXMiJ8u65ex6D3LtbrzKyEKhAeGtg7Zps",
+  authDomain: "nskrental-bbf87.firebaseapp.com",
+  projectId: "nskrental-bbf87",
+  storageBucket: "nskrental-bbf87.firebasestorage.app",
+  messagingSenderId: "654715207587",
+  appId: "1:654715207587:web:73f5281b0fdcdecf8c6416"
+};
 
-.header {
-  text-align: center;
-  padding: 12px;
-  background: linear-gradient(90deg, #d4af37, #ffd700);
-  color: #000;
-  font-weight: bold;
-}
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+const storage = getStorage(app);
 
-.info {
-  text-align: right;
-  padding: 6px 10px;
-  font-size: 12px;
-  background: rgba(0,0,0,0.4);
-  color: #ffd700;
-}
+/* =========================
+   DOM
+========================= */
+const el = id => document.getElementById(id);
 
-.content {
-  padding: 15px;
-}
+const lanjut = el("lanjut");
+const waInput = el("wa");
+const progressBox = el("progressBox");
+const progressBar = el("progressBar");
 
-.form-group {
-  background: #2a2a2a;
-  padding: 12px;
-  border-radius: 10px;
-  margin-bottom: 12px;
-}
+/* =========================
+   STATE
+========================= */
+let data = {
+  ktp: null,
+  selfie: null,
+  dokumen: null,
+  wa: null
+};
 
-.status {
-  font-size: 12px;
-  color: #00e676;
-  margin-top: 5px;
-}
-
-button {
-  width: 100%;
-  padding: 14px;
-  border-radius: 10px;
-  border: none;
-}
-
-.active {
-  background: linear-gradient(90deg, #d4af37, #ffd700);
-  color: black;
-}
-
-.disabled {
-  background: #444;
-  color: #aaa;
-}
-</style>
-</head>
-
-<body>
-
-<div class="header">Form Calon Pelanggan</div>
-
-<div class="info">
-  <div id="lokasi">Lokasi: -</div>
-  <div id="time"></div>
-</div>
-
-<div class="content">
-
-  <div class="form-group">
-    Upload KTP
-    <input type="file" id="ktp" accept="image/*" capture="environment">
-    <div id="s1" class="status"></div>
-  </div>
-
-  <div class="form-group">
-    Upload Selfie + KTP
-    <input type="file" id="selfie" accept="image/*" capture="user">
-    <div id="s2" class="status"></div>
-  </div>
-
-  <div class="form-group">
-    Pilih Dokumen
-    <select id="jenis">
-      <option value="">Pilih</option>
-      <option>KK</option>
-      <option>NPWP</option>
-      <option>ID Kerja</option>
-      <option>BPJS</option>
-    </select>
-
-    <input type="file" id="dokumen" accept="image/*" capture="environment">
-    <div id="s3" class="status"></div>
-  </div>
-
-  <div class="form-group">
-    Nomor WhatsApp
-    <input type="text" id="wa">
-    <div id="s4" class="status"></div>
-  </div>
-
-  <button id="lanjut" class="disabled" disabled>Kirim</button>
-
-</div>
-
-<script>
-// 🔐 CEK AKSES
+/* =========================
+   SECURITY CHECK
+========================= */
 if(localStorage.getItem("agree") !== "yes"){
   window.location.href = "index.html";
 }
 
-// fade in
-window.onload = () => {
-  document.body.style.opacity = "1";
+/* =========================
+   INIT
+========================= */
+window.onload = () => document.body.style.opacity = "1";
+
+/* =========================
+   UTIL - WA
+========================= */
+const onlyNumber = v => v.replace(/\D/g, "");
+
+const formatWA = v => {
+  v = onlyNumber(v);
+  if (v.startsWith("8")) v = "0" + v;
+  if (!v.startsWith("08")) v = "08";
+  return v.slice(0,13);
 };
 
-let data = {};
+const isValidWA = v => /^08\d{8,11}$/.test(v);
+const toIntl = v => v.replace(/^0/, "+62");
 
-// waktu
-setInterval(()=>{
-  time.innerText = new Date().toLocaleString();
-},1000);
+/* =========================
+   UTIL - IMAGE COMPRESS
+========================= */
+const compressImage = (file, quality = 0.7) => new Promise(resolve => {
+  const img = new Image();
+  const reader = new FileReader();
 
-// lokasi
-navigator.geolocation.getCurrentPosition(p=>{
-  lokasi.innerText =
-    "Lat:" + p.coords.latitude.toFixed(3) +
-    " Lng:" + p.coords.longitude.toFixed(3);
+  reader.onload = e => img.src = e.target.result;
+
+  img.onload = () => {
+    const canvas = document.createElement("canvas");
+    let w = img.width, h = img.height;
+
+    if (w > 1280) {
+      h *= 1280 / w;
+      w = 1280;
+    }
+
+    canvas.width = w;
+    canvas.height = h;
+
+    canvas.getContext("2d").drawImage(img, 0, 0, w, h);
+    canvas.toBlob(blob => resolve(blob), "image/jpeg", quality);
+  };
+
+  reader.readAsDataURL(file);
 });
 
-// input
-ktp.onchange = () => { data.ktp=1; s1.innerText="✔ OK"; cek(); };
-selfie.onchange = () => { data.selfie=1; s2.innerText="✔ OK"; cek(); };
+/* =========================
+   UTIL - UPLOAD
+========================= */
+const uploadFile = (file, path) => new Promise((resolve, reject) => {
+  const task = uploadBytesResumable(ref(storage, path), file);
 
-dokumen.onchange = () => {
-  if(!jenis.value){
-    alert("Pilih jenis dokumen!");
-    return;
-  }
-  data.dokumen=1;
-  s3.innerText="✔ "+jenis.value;
-  cek();
-};
+  task.on("state_changed",
+    snap => {
+      const progress = (snap.bytesTransferred / snap.totalBytes) * 100;
+      progressBar.style.width = progress + "%";
+    },
+    reject,
+    async () => resolve(await getDownloadURL(task.snapshot.ref))
+  );
+});
 
-wa.oninput = () => {
-  data.wa=wa.value;
-  s4.innerText = wa.value.length>8 ? "✔ valid":"";
-  cek();
-};
+/* =========================
+   UI UPDATE
+========================= */
+const setStatus = (id, text) => el(id).innerText = text;
 
-// validasi
-function cek(){
+const updateButton = () => {
   const valid =
     data.ktp &&
     data.selfie &&
@@ -168,14 +124,98 @@ function cek(){
     jenis.value;
 
   lanjut.disabled = !valid;
-  lanjut.className = valid ? "active":"disabled";
-}
+  lanjut.className = valid ? "active" : "disabled";
+};
 
-// submit
-lanjut.onclick = ()=>{
-  alert("Data siap dikirim 🔥");
+/* =========================
+   EVENTS
+========================= */
+
+// FILE INPUT
+ktp.onchange = () => {
+  data.ktp = ktp.files[0];
+  setStatus("s1", "✔ OK");
+  updateButton();
+};
+
+selfie.onchange = () => {
+  data.selfie = selfie.files[0];
+  setStatus("s2", "✔ OK");
+  updateButton();
+};
+
+dokumen.onchange = () => {
+  if(!jenis.value){
+    alert("Pilih jenis dokumen!");
+    return;
+  }
+  data.dokumen = dokumen.files[0];
+  setStatus("s3", "✔ " + jenis.value);
+  updateButton();
+};
+
+// WA INPUT
+waInput.addEventListener("input", () => {
+  waInput.value = formatWA(waInput.value);
+
+  if(isValidWA(waInput.value)){
+    data.wa = waInput.value;
+    setStatus("s4", "✔ valid");
+  } else {
+    data.wa = null;
+    setStatus("s4", "");
+  }
+
+  updateButton();
+});
+
+/* =========================
+   SUBMIT
+========================= */
+lanjut.onclick = async () => {
+  if(lanjut.disabled) return;
+
+  lanjut.disabled = true;
+  lanjut.innerText = "Processing...";
+  progressBox.style.display = "block";
+
+  try {
+    const wa = toIntl(data.wa);
+
+    const [ktpC, selfieC, dokC] = await Promise.all([
+      compressImage(data.ktp),
+      compressImage(data.selfie),
+      compressImage(data.dokumen)
+    ]);
+
+    const timestamp = Date.now();
+
+    const [ktpUrl, selfieUrl, dokUrl] = await Promise.all([
+      uploadFile(ktpC, "ktp/" + timestamp),
+      uploadFile(selfieC, "selfie/" + timestamp),
+      uploadFile(dokC, "dokumen/" + timestamp)
+    ]);
+
+    await addDoc(collection(db, "pelanggan"), {
+      waktu: new Date(),
+      wa,
+      lokasi: lokasi.innerText,
+      jenis: jenis.value,
+      ktp: ktpUrl,
+      selfie: selfieUrl,
+      dokumen: dokUrl
+    });
+
+    alert("Berhasil 🔥");
+    location.reload();
+
+  } catch (err) {
+    console.error(err);
+    alert("Gagal ❌");
+
+    lanjut.disabled = false;
+    lanjut.innerText = "Kirim";
+    progressBox.style.display = "none";
+  }
 };
 </script>
-
-</body>
-</html>
