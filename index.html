@@ -1,81 +1,193 @@
 <!DOCTYPE html>
-<html>
+<html lang="id">
 <head>
+<meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Persetujuan</title>
+<title>NSKRental</title>
 
 <style>
 body {
   margin: 0;
-  font-family: Arial;
-  background: linear-gradient(145deg, #2c2c2c, #1a1a1a);
-  color: #fff;
-  opacity: 0;
-  transition: opacity 0.3s;
+  font-family: 'Segoe UI', Arial, sans-serif;
+  background: radial-gradient(circle at top, #111 0%, #000 80%);
+  color: #e6c96a;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
 }
 
 /* container */
 .container {
-  padding: 20px;
-}
-
-.box {
-  background: #2a2a2a;
-  padding: 15px;
-  border-radius: 10px;
-}
-
-button {
   width: 100%;
-  padding: 14px;
-  margin-top: 15px;
-  border-radius: 10px;
-  border: none;
-}
-
-.active {
-  background: linear-gradient(90deg, #d4af37, #ffd700);
-  color: black;
-}
-
-.disabled {
-  background: #444;
-  color: #aaa;
-}
-
-/* 🔥 LOADING OVERLAY */
-.loading {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(0,0,0,0.85);
+  max-width: 900px;
+  aspect-ratio: 16 / 9;
   display: flex;
-  justify-content: center;
   align-items: center;
-  flex-direction: column;
-  visibility: hidden;
-  opacity: 0;
+  justify-content: center;
+}
+
+/* box */
+.box {
+  width: 85%;
+  text-align: center;
+}
+
+/* headline */
+.headline {
+  font-size: 20px;
+  font-weight: 400;
+  letter-spacing: 1px;
+  margin-bottom: 70px;
+  opacity: 0.8;
+}
+
+/* 🔥 brand luxury */
+.brand {
+  font-size: 34px;
+  font-weight: 700;
+  letter-spacing: 4px;
+  margin-bottom: 10px;
+
+  background: linear-gradient(
+    90deg,
+    #fff8dc,
+    #e6c96a,
+    #d4af37,
+    #e6c96a,
+    #fff8dc
+  );
+  background-size: 200% auto;
+
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+
+  text-shadow:
+    0 0 8px rgba(212,175,55,0.3),
+    0 2px 6px rgba(0,0,0,0.8);
+
+  animation: shine 6s linear infinite;
+}
+
+/* shine halus */
+@keyframes shine {
+  0% { background-position: 0% center; }
+  100% { background-position: 200% center; }
+}
+
+/* garis elegan */
+.brand::after {
+  content: "";
+  display: block;
+  width: 50px;
+  height: 2px;
+  margin: 10px auto;
+  background: linear-gradient(90deg, transparent, #d4af37, transparent);
+  opacity: 0.6;
+}
+
+/* tagline */
+.tagline {
+  font-size: 16px;
+  margin-bottom: 40px;
+  opacity: 0.85;
+}
+
+/* info */
+.info {
+  font-size: 13px;
+  margin-bottom: 40px;
+  opacity: 0.6;
+}
+
+/* checkbox */
+.check-wrap {
+  display: flex;
+  justify-content: flex-start;
+}
+
+.custom-check {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  font-size: 13px;
+  opacity: 0.9;
+}
+
+.custom-check input {
+  display: none;
+}
+
+/* checkbox luxury */
+.checkmark {
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
+  border: 1px solid #666;
+  background: #111;
+  position: relative;
   transition: 0.3s;
 }
 
-.loading.show {
-  visibility: visible;
-  opacity: 1;
+.custom-check input:checked + .checkmark {
+  background: linear-gradient(135deg, #d4af37, #e6c96a);
+  border-color: #e6c96a;
+  box-shadow: 0 0 6px rgba(212,175,55,0.4);
 }
 
-.spinner {
-  width: 40px;
-  height: 40px;
-  border: 4px solid #555;
-  border-top: 4px solid #ffd700;
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
+.checkmark::after {
+  content: "";
+  position: absolute;
+  left: 5px;
+  top: 1px;
+  width: 5px;
+  height: 10px;
+  border: solid #000;
+  border-width: 0 2px 2px 0;
+  transform: scale(0) rotate(45deg);
+  transition: 0.2s;
 }
 
-@keyframes spin {
-  to { transform: rotate(360deg); }
+.custom-check input:checked + .checkmark::after {
+  transform: scale(1) rotate(45deg);
+}
+
+/* tombol */
+button {
+  width: 100%;
+  padding: 14px;
+  margin-top: 30px;
+  border-radius: 10px;
+  border: none;
+  font-size: 15px;
+  letter-spacing: 1px;
+  transition: 0.3s;
+}
+
+/* aktif */
+.active {
+  background: linear-gradient(90deg, #d4af37, #e6c96a);
+  color: #000;
+  box-shadow: 0 0 12px rgba(212,175,55,0.4);
+}
+
+/* hover elegan */
+.active:hover {
+  box-shadow:
+    0 0 8px rgba(212,175,55,0.5),
+    0 0 20px rgba(212,175,55,0.3);
+}
+
+/* tekan halus */
+button:active {
+  transform: scale(0.98);
+}
+
+/* disabled */
+.disabled {
+  background: #1a1a1a;
+  color: #555;
 }
 </style>
 </head>
@@ -84,57 +196,46 @@ button {
 
 <div class="container">
   <div class="box">
-    <h3>Persetujuan</h3>
-    <p>Dengan melanjutkan, Anda setuju untuk mengisi data yang diperlukan.</p>
 
-    <label>
-      <input type="checkbox" id="agree"> Saya setuju
-    </label>
+    <div class="headline">
+      Mulailah Perjalanan Anda Bersama Kami
+    </div>
+
+    <div class="brand">NSKRENTAL</div>
+    <div class="tagline">Sahabat Perjalanan Anda</div>
+
+    <div class="info">
+      Untuk keamanan bersama, kendaraan kami dilengkapi Dashcam.
+    </div>
+
+    <div class="check-wrap">
+      <label class="custom-check">
+        <input type="checkbox" id="agree">
+        <span class="checkmark"></span>
+        <span>Saya setuju ketentuan di atas</span>
+      </label>
+    </div>
 
     <button id="btn" class="disabled" disabled>Lanjut</button>
+
   </div>
 </div>
 
-<!-- 🔥 LOADING -->
-<div id="loading" class="loading">
-  <div class="spinner"></div>
-  <p style="margin-top:10px;">Memproses...</p>
-</div>
-
 <script>
-const checkbox = document.getElementById('agree');
-const button = document.getElementById('btn');
-const loading = document.getElementById('loading');
+const checkbox = document.getElementById("agree");
+const button = document.getElementById("btn");
 
-window.onload = () => {
-  document.body.style.opacity = "1";
-};
-
-// auto skip kalau sudah setuju
-if(localStorage.getItem("agree") === "yes"){
-  window.location.href = "index2.html";
-}
-
-// aktifkan tombol
-checkbox.addEventListener('change', function() {
-  button.disabled = !this.checked;
-  button.className = this.checked ? "active" : "disabled";
+checkbox.addEventListener("change", () => {
+  const aktif = checkbox.checked;
+  button.disabled = !aktif;
+  button.className = aktif ? "active" : "disabled";
 });
 
-// klik lanjut
-button.addEventListener("click", function(){
-  if(button.disabled) return;
+button.addEventListener("click", () => {
+  if (button.disabled) return;
 
-  // simpan status
   localStorage.setItem("agree", "yes");
-
-  // tampilkan loading
-  loading.classList.add("show");
-
-  // delay biar kelihatan smooth
-  setTimeout(() => {
-    window.location.href = "index2.html";
-  }, 1200);
+  window.location.href = "index2.html";
 });
 </script>
 
