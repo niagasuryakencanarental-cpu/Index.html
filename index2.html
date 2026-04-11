@@ -1,4 +1,84 @@
-<script>
+<!DOCTYPE html><html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Verifikasi Pelanggan</title><!-- FIREBASE --><script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script><script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script><script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-storage.js"></script><!-- OCR --><script src="https://cdn.jsdelivr.net/npm/tesseract.js@4"></script><style>
+body{
+  background:#000;
+  color:#fff;
+  font-family:sans-serif;
+  text-align:center;
+  padding:20px;
+}
+h2{margin-bottom:15px}
+
+input,button{
+  width:90%;
+  padding:12px;
+  margin:6px;
+  border-radius:10px;
+  border:none;
+  font-size:16px;
+}
+
+button{
+  background:#00c896;
+  color:#000;
+  font-weight:bold;
+}
+
+#preview{
+  max-width:90%;
+  margin-top:10px;
+  border-radius:10px;
+  display:none;
+}
+
+#loadingScreen{
+  position:fixed;
+  top:0;left:0;
+  width:100%;height:100%;
+  background:#000;
+  display:none;
+  justify-content:center;
+  align-items:center;
+  flex-direction:column;
+  z-index:999;
+}
+
+#uploadBar{
+  display:none;
+  width:90%;
+  height:10px;
+  background:#333;
+  margin:auto;
+  border-radius:10px;
+  overflow:hidden;
+}
+
+#uploadProgress{
+  height:10px;
+  width:0%;
+  background:#00ffcc;
+}
+</style></head><body><h2>Verifikasi Pelanggan</h2><button id="btnFoto">Ambil Foto KTP</button>
+<input type="file" id="cameraInput" accept="image/*" capture="environment" hidden>
+
+<img id="preview"><input id="nik" placeholder="NIK" inputmode="numeric">
+<input id="nama" placeholder="Nama">
+<input id="ttl" placeholder="Tanggal Lahir"><label>
+  <input type="checkbox" id="check"> Kirim Data
+</label><div id="uploadBar">
+  <div id="uploadProgress"></div>
+</div><div id="loadingScreen">
+  <p id="loadingText">Loading...</p>
+</div><p id="scoreText"></p><script>
+// ================= ERROR HANDLER =================
+window.onerror = function(e){
+  document.body.innerHTML += "<p style='color:red'>"+e+"</p>";
+};
+
+document.addEventListener("DOMContentLoaded",()=>{
 
 // ================= FIREBASE =================
 const firebaseConfig = {
@@ -15,211 +95,169 @@ const db = firebase.firestore();
 const storage = firebase.storage();
 
 // ================= ELEMENT =================
-const el=id=>document.getElementById(id);
+const $ = id => document.getElementById(id);
 
-const btnFoto=el("btnFoto");
-const cameraInput=el("cameraInput");
-const preview=el("preview");
-const nik=el("nik");
-const nama=el("nama");
-const ttl=el("ttl");
-const check=el("check");
-const box=el("box");
-const loading=el("loadingScreen");
-const loadingText=el("loadingText");
-const uploadBar=el("uploadBar");
-const uploadProgress=el("uploadProgress");
-const scoreText=el("scoreText");
+const btnFoto = $("btnFoto");
+const cameraInput = $("cameraInput");
+const preview = $("preview");
+const nik = $("nik");
+const nama = $("nama");
+const ttl = $("ttl");
+const check = $("check");
+const loading = $("loadingScreen");
+const loadingText = $("loadingText");
+const uploadBar = $("uploadBar");
+const uploadProgress = $("uploadProgress");
+const scoreText = $("scoreText");
 
-let fileBlob=null;
+let fileBlob = null;
 
 // ================= COMPRESS =================
-async function compressImage(file){
- return new Promise(resolve=>{
-  const img=new Image();
-  img.src=URL.createObjectURL(file);
+function compressImage(file){
+  return new Promise(resolve=>{
+    const img = new Image();
+    img.src = URL.createObjectURL(file);
 
-  img.onload=()=>{
-   const canvas=document.createElement("canvas");
-   const ctx=canvas.getContext("2d");
+    img.onload = ()=>{
+      const canvas = document.createElement("canvas");
+      const ctx = canvas.getContext("2d");
 
-   let maxW=800;
-   let scale=maxW/img.width;
+      const scale = 800 / img.width;
+      canvas.width = 800;
+      canvas.height = img.height * scale;
 
-   canvas.width=maxW;
-   canvas.height=img.height*scale;
+      ctx.drawImage(img,0,0,canvas.width,canvas.height);
 
-   ctx.drawImage(img,0,0,canvas.width,canvas.height);
-
-   canvas.toBlob(blob=>{
-    resolve(blob);
-   },"image/jpeg",0.7);
-  };
- });
-}
-
-// ================= LOAD FACE =================
-async function loadFaceSafe(){
- try{
-  await Promise.race([
-   faceapi.nets.tinyFaceDetector.loadFromUri('https://justadudewhohacks.github.io/face-api.js/models'),
-   new Promise((_,reject)=>setTimeout(()=>reject("timeout"),5000))
-  ]);
-  return true;
- }catch{
-  return false;
- }
-}
-
-// ================= CAMERA =================
-btnFoto.onclick=()=>cameraInput.click();
-
-cameraInput.onchange=async e=>{
- try{
-  let file=e.target.files[0];
-  if(!file) return;
-
-  loading.style.display="flex";
-  loadingText.innerText="Kompres gambar...";
-
-  fileBlob=await compressImage(file);
-
-  if(fileBlob.size>2*1024*1024){
-   alert("Ukuran >2MB, ulangi foto");
-   loading.style.display="none";
-   return;
-  }
-
-  preview.src=URL.createObjectURL(fileBlob);
-  preview.style.display="block";
-
-  const img=new Image();
-  img.src=preview.src;
-  await new Promise(r=>img.onload=r);
-
-  const canvas=document.createElement("canvas");
-  const ctx=canvas.getContext("2d");
-
-  canvas.width=600;
-  canvas.height=(img.height/img.width)*600;
-  ctx.drawImage(img,0,0,canvas.width,canvas.height);
-
-  const faceReady=await loadFaceSafe();
-
-  if(faceReady){
-   loadingText.innerText="Deteksi wajah...";
-   try{
-    await faceapi.detectAllFaces(canvas,new faceapi.TinyFaceDetectorOptions({inputSize:256}));
-   }catch{}
-  }
-
-  // ================= OCR =================
-  loadingText.innerText="Membaca NIK 0%";
-
-  const nikCanvas=document.createElement("canvas");
-  const nctx=nikCanvas.getContext("2d");
-
-  let nx=canvas.width*0.05;
-  let ny=canvas.height*0.15;
-  let nw=canvas.width*0.6;
-  let nh=canvas.height*0.2;
-
-  nikCanvas.width=nw;
-  nikCanvas.height=nh;
-
-  nctx.drawImage(canvas,nx,ny,nw,nh,0,0,nw,nh);
-
-  const result=await Tesseract.recognize(nikCanvas,'eng',{
-   tessedit_char_whitelist:'0123456789',
-   logger:m=>{
-    if(m.status==="recognizing text"){
-     let p=Math.round(m.progress*100);
-     loadingText.innerText="Membaca NIK "+p+"%";
-    }
-   }
+      canvas.toBlob(blob=>resolve(blob),"image/jpeg",0.7);
+    };
   });
+}
 
-  // ================= NIK FIX =================
-  let text = result.data.text.replace(/\D/g,'');
+// ================= AUTO CROP NIK =================
+function cropNIKArea(img){
+  const canvas = document.createElement("canvas");
+  const ctx = canvas.getContext("2d");
 
-  let kandidat = text.match(/\d{10,}/g);
-  let nikFinal = "";
+  // Area NIK (estimasi posisi KTP Indonesia)
+  const x = img.width * 0.05;
+  const y = img.height * 0.18;
+  const w = img.width * 0.7;
+  const h = img.height * 0.18;
 
-  if(kandidat){
-    nikFinal = kandidat.find(x=>x.length===16) || kandidat[0];
+  canvas.width = w;
+  canvas.height = h;
+
+  ctx.drawImage(img, x, y, w, h, 0, 0, w, h);
+
+  return canvas;
+}
+
+// ================= FOTO =================
+btnFoto.onclick = () => cameraInput.click();
+
+cameraInput.onchange = async (e)=>{
+  try{
+    const file = e.target.files[0];
+    if(!file) return;
+
+    loading.style.display="flex";
+    loadingText.innerText="Memproses gambar...";
+
+    fileBlob = await compressImage(file);
+
+    if(fileBlob.size > 2*1024*1024){
+      alert("Ukuran > 2MB");
+      loading.style.display="none";
+      return;
+    }
+
+    preview.src = URL.createObjectURL(fileBlob);
+    preview.style.display="block";
+
+    // ================= LOAD IMAGE =================
+    const img = new Image();
+    img.src = preview.src;
+    await new Promise(r=>img.onload=r);
+
+    // ================= CROP NIK =================
+    const nikCanvas = cropNIKArea(img);
+
+    loadingText.innerText="Scan NIK...";
+
+    // ================= OCR =================
+    const result = await Tesseract.recognize(nikCanvas,'eng',{
+      tessedit_char_whitelist:'0123456789',
+      logger:m=>{
+        if(m.status==="recognizing text"){
+          loadingText.innerText = "Scan "+Math.round(m.progress*100)+"%";
+        }
+      }
+    });
+
+    const text = result.data.text.replace(/\D/g,'');
+    const nikMatch = text.match(/\d{16}/);
+
+    nik.value = nikMatch ? nikMatch[0] : "";
+
+    // ================= AUTO TTL =================
+    if(nik.value.length === 16){
+      let t = parseInt(nik.value.substr(6,2));
+      let b = nik.value.substr(8,2);
+      let y = nik.value.substr(10,2);
+
+      if(t > 40) t -= 40;
+      ttl.value = `${t}/${b}/19${y}`;
+    }
+
+    loading.style.display="none";
+    scoreText.innerText="Scan selesai";
+
+  }catch(err){
+    alert("Error: "+err);
+    loading.style.display="none";
   }
-
-  nik.value = nikFinal || "";
-  nik.dispatchEvent(new Event("input"));
-
-  // highlight
-  if(nikFinal){
-    nik.style.background="#003366";
-    setTimeout(()=>nik.style.background="",500);
-  }
-
-  // ================= AUTO TTL =================
-  if(nik.value.length===16){
-   let t=nik.value.substr(6,2);
-   let b=nik.value.substr(8,2);
-   let y=nik.value.substr(10,2);
-   if(t>40)t-=40;
-   ttl.value=`${t} / ${b} / 19${y}`;
-  }
-
-  // ================= FORMAT NAMA =================
-  nama.value=nama.value.toUpperCase().replace(/[^A-Z\s]/g,'');
-
-  loading.style.display="none";
-  box.style.display="block";
-  scoreText.innerText="Scan selesai";
-
- }catch(e){
-  alert("Error: "+e);
-  loading.style.display="none";
- }
 };
 
-// ================= INPUT =================
-nik.oninput=()=>nik.value=nik.value.replace(/[^0-9]/g,'');
+// ================= VALIDASI =================
+nik.oninput = () => {
+  nik.value = nik.value.replace(/[^0-9]/g,'');
+};
 
-nama.addEventListener("input",()=>{
- nama.value=nama.value.toUpperCase().replace(/[^A-Z\s]/g,'');
-});
+nama.oninput = () => {
+  nama.value = nama.value.toUpperCase().replace(/[^A-Z\s]/g,'');
+};
 
 // ================= UPLOAD =================
-check.addEventListener("change",async()=>{
- if(!check.checked||!fileBlob) return;
+check.onchange = async ()=>{
+  if(!check.checked || !fileBlob) return;
 
- uploadBar.style.display="block";
+  uploadBar.style.display="block";
 
- const fileName="ktp_"+Date.now()+".jpg";
- const ref=storage.ref("ktp/"+fileName);
+  const ref = storage.ref("ktp/ktp_"+Date.now()+".jpg");
+  const uploadTask = ref.put(fileBlob);
 
- const uploadTask=ref.put(fileBlob);
+  uploadTask.on("state_changed",
+    snap=>{
+      const p = (snap.bytesTransferred/snap.totalBytes)*100;
+      uploadProgress.style.width = p+"%";
+    },
+    ()=>alert("Upload gagal"),
+    async ()=>{
+      const url = await ref.getDownloadURL();
 
- uploadTask.on("state_changed",
-  snap=>{
-   let progress=(snap.bytesTransferred/snap.totalBytes)*100;
-   uploadProgress.style.width=progress+"%";
-  },
-  err=>{
-   alert("Upload gagal");
-  },
-  async()=>{
-   const url=await ref.getDownloadURL();
+      await db.collection("verifikasi").add({
+        nik: nik.value,
+        nama: nama.value,
+        ttl: ttl.value,
+        foto: url,
+        created_at: new Date()
+      });
 
-   await db.collection("verifikasi").add({
-    nik:nik.value,
-    nama:nama.value,
-    ttl:ttl.value,
-    foto:url,
-    created_at:new Date()
-   });
+      alert("Data berhasil disimpan");
+    }
+  );
+};
 
-   alert("Data berhasil disimpan");
-  }
- );
 });
-
-</script>
+</script></body>
+</html>
