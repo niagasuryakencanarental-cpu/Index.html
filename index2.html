@@ -130,7 +130,6 @@ body{
  border-radius:8px;
 }
 
-/* UPLOAD BAR */
 #uploadBar{
  width:85%;
  max-width:420px;
@@ -155,27 +154,26 @@ body{
 
 <body>
 
-<h2>VERIFIKASI KTP</h2>
+<h2>VERIFIKASI PELANGGAN</h2>
 
 <div class="frame">
  <img id="preview">
- <div class="label" id="label">FOTO KTP</div>
+ <div class="label" id="label">FOTO DOKUMEN</div>
 </div>
 
 <button type="button" class="btn-foto" id="btnFoto">AMBIL FOTO</button>
 
 <div class="form" id="formOCR">
- <input class="input" id="nik" placeholder="NIK">
- <input class="input" id="nama" placeholder="Nama">
- <input class="input" id="ttl" placeholder="Tanggal / Bulan / Tahun">
+ <input class="input" id="nik" placeholder="Nomor Identitas">
+ <input class="input" id="nama" placeholder="Nama Lengkap">
+ <input class="input" id="ttl" placeholder="Tanggal Lahir (DD / MM / YYYY)">
 </div>
 
 <div class="checkbox" id="box">
  <input type="checkbox" id="check">
- Saya setuju data sudah sesuai KTP
+ Saya setuju data sudah sesuai dokumen
 </div>
 
-<!-- UPLOAD BAR -->
 <div id="uploadBar">
  <div>
   <div id="uploadProgress"></div>
@@ -190,8 +188,8 @@ body{
 
 <div id="popupSuccess">
  <div class="popup-box">
-  <h3>Upload Berhasil</h3>
-  <p>Data Anda berhasil dikirim</p>
+  <h3>Verifikasi Berhasil</h3>
+  <p>Data pelanggan berhasil dikirim</p>
   <button id="btnLanjut">LANJUTKAN</button>
  </div>
 </div>
@@ -205,161 +203,152 @@ import { getStorage, ref, uploadBytesResumable } from "https://www.gstatic.com/f
 import { getFirestore, addDoc, collection, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 /* FIREBASE */
-// Import the functions you need from the SDKs you need
-import { initializeApp } from "firebase/app";
-// TODO: Add SDKs for Firebase products that you want to use
-// https://firebase.google.com/docs/web/setup#available-libraries
-
-// Your web app's Firebase configuration
 const firebaseConfig = {
   apiKey: "AIzaSyAXMiJ8u65ex6D3LtbrzKyEKhAeGtg7Zps",
   authDomain: "nskrental-bbf87.firebaseapp.com",
   projectId: "nskrental-bbf87",
-  storageBucket: "nskrental-bbf87.firebasestorage.app",
-  messagingSenderId: "654715207587",
+  storageBucket: "nskrental-bbf87.appspot.com",
   appId: "1:654715207587:web:73f5281b0fdcdecf8c6416"
 };
 
-// Initialize Firebase
 const app = initializeApp(firebaseConfig);
-
-const app=initializeApp(firebaseConfig);
-const storage=getStorage(app);
-const db=getFirestore(app);
+const storage = getStorage(app);
+const db = getFirestore(app);
 
 /* ELEMENT */
-const btnFoto=document.getElementById("btnFoto");
-const cameraInput=document.getElementById("cameraInput");
-const preview=document.getElementById("preview");
-const label=document.getElementById("label");
+const btnFoto = document.getElementById("btnFoto");
+const cameraInput = document.getElementById("cameraInput");
+const preview = document.getElementById("preview");
+const label = document.getElementById("label");
 
-const nik=document.getElementById("nik");
-const nama=document.getElementById("nama");
-const ttl=document.getElementById("ttl");
+const nik = document.getElementById("nik");
+const nama = document.getElementById("nama");
+const ttl = document.getElementById("ttl");
 
-const formOCR=document.getElementById("formOCR");
-const box=document.getElementById("box");
-const check=document.getElementById("check");
+const formOCR = document.getElementById("formOCR");
+const box = document.getElementById("box");
+const check = document.getElementById("check");
 
-const loadingScreen=document.getElementById("loadingScreen");
-const loadingText=document.getElementById("loadingText");
+const loadingScreen = document.getElementById("loadingScreen");
+const loadingText = document.getElementById("loadingText");
 
-const uploadBar=document.getElementById("uploadBar");
-const uploadProgress=document.getElementById("uploadProgress");
-const uploadText=document.getElementById("uploadText");
+const uploadBar = document.getElementById("uploadBar");
+const uploadProgress = document.getElementById("uploadProgress");
+const uploadText = document.getElementById("uploadText");
 
-const popupSuccess=document.getElementById("popupSuccess");
-const btnLanjut=document.getElementById("btnLanjut");
+const popupSuccess = document.getElementById("popupSuccess");
+const btnLanjut = document.getElementById("btnLanjut");
 
-let fileBlob=null;
+let fileBlob = null;
 
 /* CAMERA */
-btnFoto.addEventListener("click",()=>{
- cameraInput.value="";
+btnFoto.addEventListener("click", () => {
+ cameraInput.value = "";
  cameraInput.click();
 });
 
-/* TTL FORMAT */
-ttl.addEventListener("input",e=>{
- let v=e.target.value.replace(/\D/g,"").slice(0,8);
- e.target.value=v.replace(/(\d{2})(\d{2})(\d{4})/,"$1 / $2 / $3");
+/* FORMAT TANGGAL */
+ttl.addEventListener("input", e => {
+ let v = e.target.value.replace(/\D/g,"").slice(0,8);
+ e.target.value = v.replace(/(\d{2})(\d{2})(\d{4})/,"$1 / $2 / $3");
 });
 
-/* OCR CEPAT */
+/* OCR */
 function extract(t){
- t=t.replace(/\s+/g,' ');
- let nik=(t.match(/\b\d{16}\b/)||[""])[0];
- let nama=((t.match(/NAMA\s*[:\-]?\s*([A-Z\s]+)/)||["",""])[1]).trim();
- let ttlRaw=t.match(/(\d{2})[\/\-]?(\d{2})[\/\-]?(\d{4})/);
- let ttl=ttlRaw?`${ttlRaw[1]} / ${ttlRaw[2]} / ${ttlRaw[3]}`:"";
+ t = t.replace(/\s+/g,' ');
+ let nik = (t.match(/\b\d{16}\b/)||[""])[0];
+ let nama = ((t.match(/NAMA\s*[:\-]?\s*([A-Z\s]+)/)||["",""])[1]).trim();
+ let ttlRaw = t.match(/(\d{2})[\/\-]?(\d{2})[\/\-]?(\d{4})/);
+ let ttl = ttlRaw ? `${ttlRaw[1]} / ${ttlRaw[2]} / ${ttlRaw[3]}` : "";
  return {nik,nama,ttl};
 }
 
-/* VALIDASI KTP */
-function validateKTP(nikVal,namaVal,ttlVal){
- if(!/^\d{16}$/.test(nikVal)) return "NIK tidak valid";
- if(namaVal.length<3) return "Nama tidak valid";
- if(!/\d{2}\s*\/\s*\d{2}\s*\/\s*\d{4}/.test(ttlVal)) return "TTL tidak valid";
- let year=parseInt(ttlVal.split("/")[2]);
- if(year<1950 || year>new Date().getFullYear()) return "TTL tidak masuk akal";
+/* VALIDASI */
+function validateData(nikVal,namaVal,ttlVal){
+ if(!nikVal) return "Nomor identitas kosong";
+ if(namaVal.length < 3) return "Nama tidak valid";
+ if(!ttlVal) return "Tanggal lahir belum diisi";
  return null;
 }
 
-/* CAMERA INPUT */
-cameraInput.addEventListener("change",async e=>{
- const file=e.target.files[0];
- if(!file)return;
+/* PROSES FOTO */
+cameraInput.addEventListener("change", async e => {
+ const file = e.target.files[0];
+ if(!file) return;
 
- fileBlob=file;
+ fileBlob = file;
 
- preview.src=URL.createObjectURL(file);
- preview.style.display="block";
- label.style.display="none";
+ preview.src = URL.createObjectURL(file);
+ preview.style.display = "block";
+ label.style.display = "none";
 
- loadingScreen.style.display="flex";
+ loadingScreen.style.display = "flex";
 
- const result=await Tesseract.recognize(
-  preview.src,
-  'eng',
-  {
+ try{
+  const result = await Tesseract.recognize(preview.src,'eng',{
    logger:m=>{
     if(m.status==="recognizing text"){
      loadingText.innerText="Memproses... "+Math.round(m.progress*100)+"%";
     }
    }
-  }
- );
+  });
 
- loadingScreen.style.display="none";
+  const data = extract(result.data.text.toUpperCase());
 
- const data=extract(result.data.text.toUpperCase());
+  nik.value = data.nik;
+  nama.value = data.nama;
+  ttl.value = data.ttl;
 
- nik.value=data.nik;
- nama.value=data.nama;
- ttl.value=data.ttl;
+  formOCR.style.display = "block";
+  box.style.display = "block";
 
- formOCR.style.display="block";
- box.style.display="block";
+ }catch(err){
+  alert("Gagal membaca dokumen");
+  console.error(err);
+ }
+
+ loadingScreen.style.display = "none";
 });
 
-/* UPLOAD REALTIME */
-check.addEventListener("change",()=>{
- if(!check.checked || !fileBlob)return;
+/* UPLOAD */
+check.addEventListener("change", () => {
+ if(!check.checked || !fileBlob) return;
 
- const error=validateKTP(nik.value,nama.value,ttl.value);
+ const error = validateData(nik.value,nama.value,ttl.value);
  if(error){
   alert(error);
-  check.checked=false;
+  check.checked = false;
   return;
  }
 
- const fileName="ktp_"+Date.now()+".jpg";
- const storageRef=ref(storage,fileName);
+ const fileName = "dokumen_"+Date.now()+".jpg";
+ const storageRef = ref(storage,fileName);
+ const uploadTask = uploadBytesResumable(storageRef,fileBlob);
 
- const uploadTask=uploadBytesResumable(storageRef,fileBlob);
-
- uploadBar.style.display="block";
+ uploadBar.style.display = "block";
 
  uploadTask.on("state_changed",
 
  (snapshot)=>{
-  let percent=Math.round((snapshot.bytesTransferred/snapshot.totalBytes)*100);
-  uploadProgress.style.width=percent+"%";
-  uploadText.innerText="Upload "+percent+"%";
+  let percent = Math.round((snapshot.bytesTransferred/snapshot.totalBytes)*100);
+  uploadProgress.style.width = percent+"%";
+  uploadText.innerText = "Upload "+percent+"%";
  },
 
- async ()=>{},
+ (error)=>{
+  alert("Upload gagal: "+error.message);
+ },
 
  async ()=>{
   await addDoc(collection(db,"verifikasi"),{
-   nik:nik.value,
+   identitas:nik.value,
    nama:nama.value,
    tanggal_lahir:ttl.value,
    file:fileName,
    createdAt:serverTimestamp()
   });
 
-  popupSuccess.style.display="flex";
+  popupSuccess.style.display = "flex";
  }
  );
 });
