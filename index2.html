@@ -1,65 +1,3 @@
-<!DOCTYPE html>
-<html lang="id">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Verifikasi Pelanggan</title>
-
-<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&display=swap" rel="stylesheet">
-
-<script src="https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/face-api.js"></script>
-
-<!-- FIREBASE -->
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
-
-<style>
-body{margin:0;background:#000;color:#fff;font-family:'Orbitron';text-align:center;}
-.frame{width:85%;max-width:420px;aspect-ratio:10/6;border:2mm solid #888;margin:20px auto;border-radius:10px;background:#111;display:flex;justify-content:center;align-items:center;position:relative;}
-.frame img{width:100%;height:100%;object-fit:cover;display:none;}
-.label{position:absolute;color:#00aaff;}
-.btn{width:85%;max-width:420px;padding:14px;margin:10px auto;background:linear-gradient(45deg,#003366,#0055aa);color:#000;font-weight:900;border:none;border-radius:8px;}
-.input{width:85%;max-width:420px;padding:10px;margin:5px auto;border-radius:6px;border:none;}
-.checkbox{display:none;margin:10px;}
-#loadingScreen{position:fixed;top:0;left:0;width:100%;height:100%;background:#000;display:none;justify-content:center;align-items:center;flex-direction:column;}
-.loader{border:5px solid #222;border-top:5px solid #00aaff;border-radius:50%;width:50px;height:50px;animation:spin 1s linear infinite;}
-@keyframes spin{100%{transform:rotate(360deg);}}
-#uploadBar{display:none;width:85%;margin:auto;}
-#uploadProgress{height:10px;background:#00aaff;width:0%;}
-</style>
-</head>
-
-<body>
-
-<h2>VERIFIKASI PELANGGAN</h2>
-
-<div class="frame">
- <img id="preview">
- <div class="label">FOTO KTP</div>
-</div>
-
-<input type="file" id="cameraInput" accept="image/*" capture="environment" hidden>
-<button class="btn" id="btnFoto">AMBIL FOTO</button>
-
-<input class="input" id="nik" placeholder="NIK" inputmode="numeric">
-<input class="input" id="nama" placeholder="Nama">
-<input class="input" id="ttl" placeholder="Tanggal Lahir" inputmode="numeric">
-
-<div class="checkbox" id="box">
- <input type="checkbox" id="check"> Data sudah sesuai
-</div>
-
-<p id="scoreText"></p>
-
-<div id="uploadBar"><div id="uploadProgress"></div></div>
-
-<div id="loadingScreen">
- <div class="loader"></div>
- <p id="loadingText">Processing...</p>
-</div>
-
 <script>
 
 // ================= FIREBASE =================
@@ -170,9 +108,12 @@ cameraInput.onchange=async e=>{
 
   if(faceReady){
    loadingText.innerText="Deteksi wajah...";
-   await faceapi.detectAllFaces(canvas,new faceapi.TinyFaceDetectorOptions());
+   try{
+    await faceapi.detectAllFaces(canvas,new faceapi.TinyFaceDetectorOptions({inputSize:256}));
+   }catch{}
   }
 
+  // ================= OCR =================
   loadingText.innerText="Membaca NIK 0%";
 
   const nikCanvas=document.createElement("canvas");
@@ -198,10 +139,26 @@ cameraInput.onchange=async e=>{
    }
   });
 
-  let text=result.data.text.replace(/\D/g,'');
-  let match=text.match(/\d{16}/);
-  nik.value=match?match[0]:"";
+  // ================= NIK FIX =================
+  let text = result.data.text.replace(/\D/g,'');
 
+  let kandidat = text.match(/\d{10,}/g);
+  let nikFinal = "";
+
+  if(kandidat){
+    nikFinal = kandidat.find(x=>x.length===16) || kandidat[0];
+  }
+
+  nik.value = nikFinal || "";
+  nik.dispatchEvent(new Event("input"));
+
+  // highlight
+  if(nikFinal){
+    nik.style.background="#003366";
+    setTimeout(()=>nik.style.background="",500);
+  }
+
+  // ================= AUTO TTL =================
   if(nik.value.length===16){
    let t=nik.value.substr(6,2);
    let b=nik.value.substr(8,2);
@@ -210,6 +167,7 @@ cameraInput.onchange=async e=>{
    ttl.value=`${t} / ${b} / 19${y}`;
   }
 
+  // ================= FORMAT NAMA =================
   nama.value=nama.value.toUpperCase().replace(/[^A-Z\s]/g,'');
 
   loading.style.display="none";
@@ -265,6 +223,3 @@ check.addEventListener("change",async()=>{
 });
 
 </script>
-
-</body>
-</html>
