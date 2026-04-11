@@ -285,7 +285,39 @@ cameraInput.addEventListener("change", async e => {
  loadingScreen.style.display = "flex";
 
  try{
-  const result = await Tesseract.recognize(preview.src,'eng',{
+  console.log("OCR mulai...");
+
+  /* ===== PREPROCESS IMAGE ===== */
+  const img = new Image();
+  img.src = URL.createObjectURL(file);
+
+  await new Promise(res => img.onload = res);
+
+  const canvas = document.createElement("canvas");
+  const ctx = canvas.getContext("2d");
+
+  const maxWidth = 1000;
+  const scale = maxWidth / img.width;
+
+  canvas.width = maxWidth;
+  canvas.height = img.height * scale;
+
+  ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+  let imageData = ctx.getImageData(0,0,canvas.width,canvas.height);
+  let data = imageData.data;
+
+  // grayscale + threshold biar teks tajam
+  for(let i=0;i<data.length;i+=4){
+    let avg = (data[i]+data[i+1]+data[i+2])/3;
+    avg = avg > 140 ? 255 : 0;
+    data[i]=data[i+1]=data[i+2]=avg;
+  }
+
+  ctx.putImageData(imageData,0,0);
+
+  /* ===== OCR ===== */
+  const result = await Tesseract.recognize(canvas,'eng+ind',{
    logger:m=>{
     if(m.status==="recognizing text"){
      loadingText.innerText="Memproses... "+Math.round(m.progress*100)+"%";
@@ -293,17 +325,20 @@ cameraInput.addEventListener("change", async e => {
    }
   });
 
-  const data = extract(result.data.text.toUpperCase());
+  console.log("HASIL OCR:", result.data.text);
 
-  nik.value = data.nik;
-  nama.value = data.nama;
-  ttl.value = data.ttl;
+  const hasil = result.data.text.toUpperCase();
+  const parsed = extract(hasil);
+
+  nik.value = parsed.nik;
+  nama.value = parsed.nama;
+  ttl.value = parsed.ttl;
 
   formOCR.style.display = "block";
   box.style.display = "block";
 
  }catch(err){
-  alert("Gagal membaca dokumen");
+  alert("OCR gagal / tidak terbaca");
   console.error(err);
  }
 
