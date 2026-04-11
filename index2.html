@@ -1,91 +1,77 @@
-<!DOCTYPE html><html lang="id">
+<!DOCTYPE html>
+<html lang="id">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Verifikasi Pelanggan</title><!-- FIREBASE --><script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script><script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script><script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-storage.js"></script><!-- OCR --><script src="https://cdn.jsdelivr.net/npm/tesseract.js@4"></script><style>
-body{
-  background:#000;
-  color:#fff;
-  font-family:sans-serif;
-  text-align:center;
-  padding:20px;
-}
-h2{margin-bottom:15px}
+<title>Verifikasi Pelanggan</title>
 
-input,button{
-  width:90%;
-  padding:12px;
-  margin:6px;
-  border-radius:10px;
-  border:none;
-  font-size:16px;
-}
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-storage.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@4"></script>
 
-button{
-  background:#00c896;
-  color:#000;
-  font-weight:bold;
-}
+<style>
+body{background:#000;color:#fff;font-family:sans-serif;text-align:center;padding:20px}
+input,button{width:90%;padding:12px;margin:6px;border-radius:10px;border:none;font-size:16px}
+button{background:#00c896;color:#000;font-weight:bold}
+#preview{max-width:90%;margin-top:10px;border-radius:10px;display:none}
 
-#preview{
-  max-width:90%;
-  margin-top:10px;
-  border-radius:10px;
-  display:none;
-}
+#checkboxArea{width:90%;margin:auto;text-align:left;display:none}
+#checkboxArea small{color:#aaa;display:block;margin-top:5px}
+
+#uploadBar{display:none;width:90%;height:10px;background:#333;margin:auto;border-radius:10px;overflow:hidden}
+#uploadProgress{height:10px;width:0%;background:#00ffcc}
 
 #loadingScreen{
-  position:fixed;
-  top:0;left:0;
-  width:100%;height:100%;
-  background:#000;
-  display:none;
-  justify-content:center;
-  align-items:center;
-  flex-direction:column;
-  z-index:999;
+position:fixed;top:0;left:0;width:100%;height:100%;
+background:#000;display:none;justify-content:center;align-items:center;flex-direction:column;z-index:999;
 }
 
-#uploadBar{
-  display:none;
-  width:90%;
-  height:10px;
-  background:#333;
-  margin:auto;
-  border-radius:10px;
-  overflow:hidden;
+#popup{
+position:fixed;top:0;left:0;width:100%;height:100%;
+background:rgba(0,0,0,0.8);display:none;justify-content:center;align-items:center;
 }
+#popupBox{background:#111;padding:20px;border-radius:15px;width:80%}
+</style>
+</head>
 
-#uploadProgress{
-  height:10px;
-  width:0%;
-  background:#00ffcc;
-}
-</style></head><body><h2>Verifikasi Pelanggan</h2><button id="btnFoto">Ambil Foto KTP</button>
+<body>
+
+<h2>Verifikasi Pelanggan</h2>
+
+<button id="btnFoto">Ambil Foto KTP</button>
 <input type="file" id="cameraInput" accept="image/*" capture="environment" hidden>
 
-<img id="preview"><input id="nik" placeholder="NIK" inputmode="numeric">
+<img id="preview">
+
+<input id="nik" placeholder="NIK" inputmode="numeric">
 <input id="nama" placeholder="Nama">
-<input id="ttl" placeholder="Tanggal Lahir"><label>
-  <input type="checkbox" id="check"> Kirim Data
-</label><div id="uploadBar">
-  <div id="uploadProgress"></div>
-</div><div id="loadingScreen">
-  <p id="loadingText">Loading...</p>
-</div><p id="scoreText"></p><script>
-// ================= ERROR HANDLER =================
-window.onerror = function(e){
-  document.body.innerHTML += "<p style='color:red'>"+e+"</p>";
-};
+<input id="ttl" placeholder="DD/MM/YYYY" inputmode="numeric">
 
-document.addEventListener("DOMContentLoaded",()=>{
+<div id="checkboxArea">
+  <label><input type="checkbox" id="check"> Kirim Data</label>
+  <small>Data sudah sesuai dengan KTP</small>
+</div>
 
-// ================= FIREBASE =================
+<div id="uploadBar"><div id="uploadProgress"></div></div>
+
+<div id="loadingScreen"><p id="loadingText">Loading...</p></div>
+
+<div id="popup">
+  <div id="popupBox">
+    <p>Data berhasil dikirim</p>
+    <button onclick="lanjut()">Lanjutkan</button>
+  </div>
+</div>
+
+<script>
+
+// FIREBASE
 const firebaseConfig = {
   apiKey: "AIzaSyAXMiJ8u65ex6D3LtbrzKyEKhAeGtg7Zps",
   authDomain: "nskrental-bbf87.firebaseapp.com",
   projectId: "nskrental-bbf87",
-  storageBucket: "nskrental-bbf87.firebasestorage.app",
+  storageBucket: "nskrental-bbf87.appspot.com",
   messagingSenderId: "654715207587",
   appId: "1:654715207587:web:73f5281b0fdcdecf8c6416"
 };
@@ -94,7 +80,7 @@ firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 const storage = firebase.storage();
 
-// ================= ELEMENT =================
+// ELEMENT
 const $ = id => document.getElementById(id);
 
 const btnFoto = $("btnFoto");
@@ -104,132 +90,80 @@ const nik = $("nik");
 const nama = $("nama");
 const ttl = $("ttl");
 const check = $("check");
-const loading = $("loadingScreen");
-const loadingText = $("loadingText");
+const checkboxArea = $("checkboxArea");
+
 const uploadBar = $("uploadBar");
 const uploadProgress = $("uploadProgress");
-const scoreText = $("scoreText");
+
+const loading = $("loadingScreen");
+const popup = $("popup");
 
 let fileBlob = null;
 
-// ================= COMPRESS =================
-function compressImage(file){
-  return new Promise(resolve=>{
-    const img = new Image();
-    img.src = URL.createObjectURL(file);
-
-    img.onload = ()=>{
-      const canvas = document.createElement("canvas");
-      const ctx = canvas.getContext("2d");
-
-      const scale = 800 / img.width;
-      canvas.width = 800;
-      canvas.height = img.height * scale;
-
-      ctx.drawImage(img,0,0,canvas.width,canvas.height);
-
-      canvas.toBlob(blob=>resolve(blob),"image/jpeg",0.7);
-    };
-  });
+// VALIDASI FORM
+function cekForm(){
+  if(nik.value && nama.value && ttl.value){
+    checkboxArea.style.display="block";
+  }else{
+    checkboxArea.style.display="none";
+  }
 }
 
-// ================= AUTO CROP NIK =================
-function cropNIKArea(img){
-  const canvas = document.createElement("canvas");
-  const ctx = canvas.getContext("2d");
+nik.oninput = ()=>{
+  nik.value = nik.value.replace(/[^0-9]/g,'');
+  cekForm();
+};
 
-  // Area NIK (estimasi posisi KTP Indonesia)
-  const x = img.width * 0.05;
-  const y = img.height * 0.18;
-  const w = img.width * 0.7;
-  const h = img.height * 0.18;
+nama.oninput = ()=>{
+  nama.value = nama.value.toUpperCase().replace(/[^A-Z\s]/g,'');
+  cekForm();
+};
 
-  canvas.width = w;
-  canvas.height = h;
+// AUTO FORMAT TTL
+ttl.oninput = ()=>{
+  let v = ttl.value.replace(/[^0-9]/g,'').slice(0,8);
 
-  ctx.drawImage(img, x, y, w, h, 0, 0, w, h);
+  if(v.length >= 5){
+    ttl.value = v.slice(0,2)+"/"+v.slice(2,4)+"/"+v.slice(4,8);
+  }else if(v.length >= 3){
+    ttl.value = v.slice(0,2)+"/"+v.slice(2,4);
+  }else{
+    ttl.value = v;
+  }
 
-  return canvas;
-}
+  cekForm();
+};
 
-// ================= FOTO =================
+// FOTO
 btnFoto.onclick = () => cameraInput.click();
 
 cameraInput.onchange = async (e)=>{
-  try{
-    const file = e.target.files[0];
-    if(!file) return;
+  const file = e.target.files[0];
+  if(!file) return;
 
-    loading.style.display="flex";
-    loadingText.innerText="Memproses gambar...";
+  loading.style.display="flex";
 
-    fileBlob = await compressImage(file);
+  fileBlob = file;
 
-    if(fileBlob.size > 2*1024*1024){
-      alert("Ukuran > 2MB");
-      loading.style.display="none";
-      return;
-    }
+  preview.src = URL.createObjectURL(fileBlob);
+  preview.style.display="block";
 
-    preview.src = URL.createObjectURL(fileBlob);
-    preview.style.display="block";
+  const result = await Tesseract.recognize(fileBlob,'eng',{
+    tessedit_char_whitelist:'0123456789'
+  });
 
-    // ================= LOAD IMAGE =================
-    const img = new Image();
-    img.src = preview.src;
-    await new Promise(r=>img.onload=r);
+  const text = result.data.text.replace(/\D/g,'');
+  const nikMatch = text.match(/\d{16}/);
 
-    // ================= CROP NIK =================
-    const nikCanvas = cropNIKArea(img);
+  nik.value = nikMatch ? nikMatch[0] : "";
 
-    loadingText.innerText="Scan NIK...";
-
-    // ================= OCR =================
-    const result = await Tesseract.recognize(nikCanvas,'eng',{
-      tessedit_char_whitelist:'0123456789',
-      logger:m=>{
-        if(m.status==="recognizing text"){
-          loadingText.innerText = "Scan "+Math.round(m.progress*100)+"%";
-        }
-      }
-    });
-
-    const text = result.data.text.replace(/\D/g,'');
-    const nikMatch = text.match(/\d{16}/);
-
-    nik.value = nikMatch ? nikMatch[0] : "";
-
-    // ================= AUTO TTL =================
-    if(nik.value.length === 16){
-      let t = parseInt(nik.value.substr(6,2));
-      let b = nik.value.substr(8,2);
-      let y = nik.value.substr(10,2);
-
-      if(t > 40) t -= 40;
-      ttl.value = `${t}/${b}/19${y}`;
-    }
-
-    loading.style.display="none";
-    scoreText.innerText="Scan selesai";
-
-  }catch(err){
-    alert("Error: "+err);
-    loading.style.display="none";
-  }
+  cekForm();
+  loading.style.display="none";
 };
 
-// ================= VALIDASI =================
-nik.oninput = () => {
-  nik.value = nik.value.replace(/[^0-9]/g,'');
-};
-
-nama.oninput = () => {
-  nama.value = nama.value.toUpperCase().replace(/[^A-Z\s]/g,'');
-};
-
-// ================= UPLOAD =================
+// UPLOAD
 check.onchange = async ()=>{
-  if(!check.checked || !fileBlob) return;
+  if(!check.checked) return;
 
   uploadBar.style.display="block";
 
@@ -253,11 +187,17 @@ check.onchange = async ()=>{
         created_at: new Date()
       });
 
-      alert("Data berhasil disimpan");
+      popup.style.display="flex";
     }
   );
 };
 
-});
-</script></body>
+// LANJUT
+function lanjut(){
+  window.location.href = "index3.html";
+}
+
+</script>
+
+</body>
 </html>
