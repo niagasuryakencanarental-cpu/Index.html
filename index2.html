@@ -1,9 +1,43 @@
-<!-- ================= LIBRARY WAJIB ================= -->
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/tesseract.js@2/dist/tesseract.min.js"></script>
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Verifikasi</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
 
-<!-- ================= SCRIPT UTAMA ================= -->
+  <!-- ================= LIBRARY ================= -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@2/dist/tesseract.min.js"></script>
+
+</head>
+
+<body style="font-family:sans-serif; padding:20px;">
+
+<h2>Form Verifikasi</h2>
+
+<input id="nik" placeholder="NIK"><br><br>
+<input id="nama" placeholder="NAMA"><br><br>
+<input id="ttl" placeholder="DD/MM/YYYY"><br><br>
+
+<button id="btnFoto">Ambil Foto</button>
+<input type="file" id="cameraInput" accept="image/*" style="display:none"><br><br>
+
+<img id="preview" width="200" style="display:none"><br><br>
+
+<button id="btnKirim" style="display:none">Kirim</button>
+
+<br><br>
+
+<div id="loadingScreen" style="display:none">Loading...</div>
+<div id="popup" style="display:none">Berhasil!</div>
+
+<div id="uploadBar" style="display:none; width:100%; background:#ddd;">
+  <div id="uploadProgress" style="height:10px; width:0%; background:green;"></div>
+</div>
+
+<span id="percentText"></span>
+
+<!-- ================= SCRIPT ================= -->
 <script>
 document.addEventListener("DOMContentLoaded", () => {
 
@@ -74,127 +108,113 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // ================= VALIDASI =================
   const cekForm = () => {
-    if (!btnKirim) return;
-
     btnKirim.style.display =
-      (nik?.value && nama?.value && ttl?.value) ? "block" : "none";
+      (nik.value && nama.value && ttl.value) ? "block" : "none";
   };
 
-  if (nik) {
-    nik.oninput = () => {
-      nik.value = nik.value.replace(/[^0-9]/g, '');
-      cekForm();
-    };
-  }
+  nik.oninput = () => {
+    nik.value = nik.value.replace(/[^0-9]/g, '');
+    cekForm();
+  };
 
-  if (nama) {
-    nama.oninput = () => {
-      nama.value = nama.value.toUpperCase().replace(/[^A-Z\s]/g, '');
-      cekForm();
-    };
-  }
+  nama.oninput = () => {
+    nama.value = nama.value.toUpperCase().replace(/[^A-Z\s]/g, '');
+    cekForm();
+  };
 
-  if (ttl) {
-    ttl.oninput = () => {
-      let v = ttl.value.replace(/[^0-9]/g, '').slice(0, 8);
+  ttl.oninput = () => {
+    let v = ttl.value.replace(/[^0-9]/g, '').slice(0, 8);
 
-      if (v.length >= 5) {
-        ttl.value = `${v.slice(0,2)}/${v.slice(2,4)}/${v.slice(4,8)}`;
-      } else if (v.length >= 3) {
-        ttl.value = `${v.slice(0,2)}/${v.slice(2,4)}`;
-      } else {
-        ttl.value = v;
-      }
+    if (v.length >= 5) {
+      ttl.value = `${v.slice(0,2)}/${v.slice(2,4)}/${v.slice(4,8)}`;
+    } else if (v.length >= 3) {
+      ttl.value = `${v.slice(0,2)}/${v.slice(2,4)}`;
+    } else {
+      ttl.value = v;
+    }
 
-      cekForm();
-    };
-  }
+    cekForm();
+  };
 
   // ================= FOTO =================
-  if (btnFoto && cameraInput) {
-    btnFoto.onclick = () => cameraInput.click();
+  btnFoto.onclick = () => cameraInput.click();
 
-    cameraInput.onchange = async e => {
-      try {
-        const file = e.target.files[0];
-        if (!file) return;
+  cameraInput.onchange = async e => {
+    try {
+      const file = e.target.files[0];
+      if (!file) return;
 
-        if (loading) loading.style.display = "block";
+      loading.style.display = "block";
 
-        const compressed = await compressImage(file);
+      const compressed = await compressImage(file);
 
-        if (compressed.size > 2 * 1024 * 1024) {
-          alert("Ukuran > 2MB");
-          if (loading) loading.style.display = "none";
-          return;
-        }
-
-        fileBlob = compressed;
-
-        if (preview) {
-          preview.src = URL.createObjectURL(fileBlob);
-          preview.style.display = "block";
-        }
-
-        const result = await Tesseract.recognize(fileBlob, 'eng');
-        const text = result.data.text.replace(/\D/g, '');
-        const nikMatch = text.match(/\d{16}/);
-
-        if (nik) nik.value = nikMatch ? nikMatch[0] : "";
-
-        cekForm();
-      } catch (err) {
-        console.error(err);
-        alert("Gagal membaca gambar");
-      } finally {
-        if (loading) loading.style.display = "none";
+      if (compressed.size > 2 * 1024 * 1024) {
+        alert("Ukuran > 2MB");
+        loading.style.display = "none";
+        return;
       }
-    };
-  }
+
+      fileBlob = compressed;
+
+      preview.src = URL.createObjectURL(fileBlob);
+      preview.style.display = "block";
+
+      const result = await Tesseract.recognize(fileBlob, 'eng');
+      const text = result.data.text.replace(/\D/g, '');
+      const nikMatch = text.match(/\d{16}/);
+
+      nik.value = nikMatch ? nikMatch[0] : "";
+
+      cekForm();
+    } catch (err) {
+      alert("Gagal membaca gambar");
+      console.error(err);
+    } finally {
+      loading.style.display = "none";
+    }
+  };
 
   // ================= UPLOAD =================
-  if (btnKirim) {
-    btnKirim.onclick = async () => {
-      try {
-        if (!fileBlob) {
-          alert("Ambil foto dulu");
-          return;
-        }
-
-        if (uploadBar) uploadBar.style.display = "block";
-
-        const formData = new FormData();
-        formData.append("file", fileBlob);
-        formData.append("upload_preset", "ml_default");
-
-        const res = await fetch("https://api.cloudinary.com/v1_1/dppi5twst/image/upload", {
-          method: "POST",
-          body: formData
-        });
-
-        const data = await res.json();
-
-        if (!data.secure_url) throw new Error("Upload gagal");
-
-        if (uploadProgress) uploadProgress.style.width = "100%";
-        if (percentText) percentText.innerText = "100%";
-
-        await db.collection("verifikasi").add({
-          nik: nik?.value || "",
-          nama: nama?.value || "",
-          ttl: ttl?.value || "",
-          foto: data.secure_url,
-          created_at: firebase.firestore.FieldValue.serverTimestamp()
-        });
-
-        if (popup) popup.style.display = "block";
-
-      } catch (err) {
-        console.error(err);
-        alert("Upload gagal: " + err.message);
+  btnKirim.onclick = async () => {
+    try {
+      if (!fileBlob) {
+        alert("Ambil foto dulu");
+        return;
       }
-    };
-  }
+
+      uploadBar.style.display = "block";
+
+      const formData = new FormData();
+      formData.append("file", fileBlob);
+      formData.append("upload_preset", "ml_default");
+
+      const res = await fetch("https://api.cloudinary.com/v1_1/dppi5twst/image/upload", {
+        method: "POST",
+        body: formData
+      });
+
+      const data = await res.json();
+
+      if (!data.secure_url) throw new Error("Upload gagal");
+
+      uploadProgress.style.width = "100%";
+      percentText.innerText = "100%";
+
+      await db.collection("verifikasi").add({
+        nik: nik.value,
+        nama: nama.value,
+        ttl: ttl.value,
+        foto: data.secure_url,
+        created_at: firebase.firestore.FieldValue.serverTimestamp()
+      });
+
+      popup.style.display = "block";
+
+    } catch (err) {
+      alert("Upload gagal: " + err.message);
+      console.error(err);
+    }
+  };
 
   // ================= LANJUT =================
   window.lanjut = () => {
@@ -203,3 +223,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
 });
 </script>
+
+</body>
+</html>
