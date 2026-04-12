@@ -1,227 +1,282 @@
 <!DOCTYPE html>
-<html>
+<html lang="id">
 <head>
-  <title>Verifikasi</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Verifikasi Pelanggan</title>
 
-  <!-- ================= LIBRARY ================= -->
-  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@2/dist/tesseract.min.js"></script>
+<style>
+body { margin:0; background:#0f0f0f; font-family:Arial; color:#fff; }
+.container { max-width:420px; margin:auto; padding:20px; }
+.title { text-align:center; font-size:22px; margin-bottom:20px; }
 
+.input {
+  background:#1a1a1a;
+  border-radius:12px;
+  padding:12px;
+  margin-bottom:12px;
+}
+.input input {
+  width:100%;
+  border:none;
+  background:transparent;
+  color:#fff;
+  outline:none;
+}
+
+/* UPLOAD */
+.upload-box {
+  height:140px;
+  background:#1a1a1a;
+  border-radius:12px;
+  margin-bottom:12px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  position:relative;
+  cursor:pointer;
+  border:1px dashed #333;
+}
+
+.upload-box span { opacity:0.6; }
+
+.preview {
+  position:absolute;
+  width:100%;
+  height:100%;
+  object-fit:cover;
+  border-radius:12px;
+  display:none;
+  filter:brightness(0.6);
+  transition:.3s;
+}
+.preview.done {
+  filter:brightness(1.1);
+  transform:scale(1.02);
+}
+
+.progress {
+  position:absolute;
+  font-weight:bold;
+}
+
+/* CHECK ICON */
+.check-icon {
+  position:absolute;
+  top:8px;
+  right:8px;
+  background:#00c853;
+  width:22px;
+  height:22px;
+  border-radius:50%;
+  display:none;
+  align-items:center;
+  justify-content:center;
+  font-size:12px;
+}
+.check-icon.show { display:flex; }
+
+/* BUTTON */
+.button {
+  padding:14px;
+  border-radius:12px;
+  text-align:center;
+  background:#333;
+  opacity:.5;
+}
+.button.active {
+  opacity:1;
+  cursor:pointer;
+}
+</style>
 </head>
 
-<body style="font-family:sans-serif; padding:20px;">
+<body>
 
-<h2>Form Verifikasi</h2>
+<div class="container">
 
-<input id="nik" placeholder="NIK"><br><br>
-<input id="nama" placeholder="NAMA"><br><br>
-<input id="ttl" placeholder="DD/MM/YYYY"><br><br>
+<div class="title">Verifikasi Pelanggan</div>
 
-<button id="btnFoto">Ambil Foto</button>
-<input type="file" id="cameraInput" accept="image/*" style="display:none"><br><br>
+<div class="input"><input id="nik" maxlength="16" inputmode="numeric" placeholder="16 Digit NIK"></div>
+<div class="input"><input id="nama" placeholder="NAMA LENGKAP"></div>
+<div class="input"><input id="tempat" placeholder="TEMPAT LAHIR"></div>
+<div class="input"><input id="tanggal" placeholder="DD/MM/YYYY" inputmode="numeric"></div>
 
-<img id="preview" width="200" style="display:none"><br><br>
+<label class="upload-box">
+  <span>Upload Foto KTP</span>
+  <img class="preview">
+  <div class="progress"></div>
+  <div class="check-icon">✔</div>
+  <input type="file" accept="image/*" onchange="handleUpload(event,'ktp')">
+</label>
 
-<button id="btnKirim" style="display:none">Kirim</button>
+<label class="upload-box">
+  <span>Upload Foto Selfie</span>
+  <img class="preview">
+  <div class="progress"></div>
+  <div class="check-icon">✔</div>
+  <input type="file" accept="image/*" onchange="handleUpload(event,'selfie')">
+</label>
 
-<br><br>
-
-<div id="loadingScreen" style="display:none">Loading...</div>
-<div id="popup" style="display:none">Berhasil!</div>
-
-<div id="uploadBar" style="display:none; width:100%; background:#ddd;">
-  <div id="uploadProgress" style="height:10px; width:0%; background:green;"></div>
+<div style="margin-top:10px;">
+  <input type="checkbox" id="agree"> Semua data sesuai KTP
 </div>
 
-<span id="percentText"></span>
+<div id="btn" class="button">Lanjut</div>
 
-<!-- ================= SCRIPT ================= -->
-<script>
-document.addEventListener("DOMContentLoaded", () => {
+</div>
 
-  console.log("Script jalan");
+<script type="module">
 
-  // ================= FIREBASE =================
-  const firebaseConfig = {
-    apiKey: "AIzaSyAXMiJ8u65ex6D3LtbrzKyEKhAeGtg7Zps",
-    authDomain: "nskrental-bbf87.firebaseapp.com",
-    projectId: "nskrental-bbf87",
-    storageBucket: "nskrental-bbf87.appspot.com",
-    messagingSenderId: "654715207587",
-    appId: "1:654715207587:web:73f5281b0fdcdecf8c6416"
-  };
+/* ================= FIREBASE ================= */
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import { getFirestore, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-  firebase.initializeApp(firebaseConfig);
-  const db = firebase.firestore();
+const firebaseConfig = {
+  apiKey: "AIzaSyAXMiJ8u65ex6D3LtbrzKyEKhAeGtg7Zps",
+  authDomain: "nskrental-bbf87.firebaseapp.com",
+  projectId: "nskrental-bbf87",
+  storageBucket: "nskrental-bbf87.firebasestorage.app",
+  messagingSenderId: "654715207587",
+  appId: "1:654715207587:web:73f5281b0fdcdecf8c6416"
+};
 
-  // ================= ELEMENT =================
-  const get = id => document.getElementById(id);
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
 
-  const btnFoto = get("btnFoto");
-  const cameraInput = get("cameraInput");
-  const preview = get("preview");
+/* ================= GLOBAL ================= */
+let uploaded = { ktp:null, selfie:null };
+let uploading = { ktp:false, selfie:false };
 
-  const nik = get("nik");
-  const nama = get("nama");
-  const ttl = get("ttl");
-  const btnKirim = get("btnKirim");
+/* ================= BUTTON ================= */
+const btn = document.getElementById("btn");
+document.getElementById("agree").onchange = e=>{
+  btn.classList.toggle("active", e.target.checked);
+};
 
-  const uploadBar = get("uploadBar");
-  const uploadProgress = get("uploadProgress");
-  const percentText = get("percentText");
+/* ================= FORMAT ================= */
+["nama","tempat"].forEach(id=>{
+  document.getElementById(id).addEventListener("input", e=>{
+    e.target.value = e.target.value.toUpperCase();
+  });
+});
 
-  const loading = get("loadingScreen");
-  const popup = get("popup");
+document.getElementById("tanggal").addEventListener("input", e=>{
+  let v=e.target.value.replace(/\D/g,'').slice(0,8);
+  if(v.length>=4) v=v.replace(/(\d{2})(\d{2})(\d+)/,"$1/$2/$3");
+  else if(v.length>=2) v=v.replace(/(\d{2})(\d+)/,"$1/$2");
+  e.target.value=v;
+});
 
-  let fileBlob = null;
+/* ================= COMPRESS ================= */
+function compressImage(file){
+  return new Promise(res=>{
+    const img=new Image();
+    img.src=URL.createObjectURL(file);
+    img.onload=()=>{
+      const canvas=document.createElement("canvas");
+      const ctx=canvas.getContext("2d");
+      let scale=Math.sqrt((5*1024*1024)/file.size);
+      canvas.width=img.width*scale;
+      canvas.height=img.height*scale;
+      ctx.drawImage(img,0,0,canvas.width,canvas.height);
+      canvas.toBlob(blob=>res(blob),'image/jpeg',0.7);
+    };
+  });
+}
 
-  // ================= KOMPRES =================
-  const compressImage = file => new Promise(resolve => {
-    const img = new Image();
-    const reader = new FileReader();
+/* ================= UPLOAD CLOUDINARY ================= */
+function uploadCloudinary(file,type,box){
+  return new Promise((resolve,reject)=>{
 
-    reader.onload = e => img.src = e.target.result;
+    const xhr=new XMLHttpRequest();
+    const fd=new FormData();
 
-    img.onload = () => {
-      const canvas = document.createElement("canvas");
-      const maxWidth = 1280;
+    const progress=box.querySelector(".progress");
+    const preview=box.querySelector(".preview");
+    const check=box.querySelector(".check-icon");
 
-      let { width, height } = img;
+    fd.append("file",file);
+    fd.append("upload_preset","ml_default");
 
-      if (width > maxWidth) {
-        height *= maxWidth / width;
-        width = maxWidth;
+    xhr.open("POST","https://api.cloudinary.com/v1_1/dppi5twst/image/upload");
+
+    uploading[type]=true;
+
+    xhr.upload.onprogress=e=>{
+      if(e.lengthComputable){
+        progress.innerText=Math.round(e.loaded/e.total*100)+"%";
       }
-
-      canvas.width = width;
-      canvas.height = height;
-
-      canvas.getContext("2d").drawImage(img, 0, 0, width, height);
-
-      canvas.toBlob(blob => resolve(blob), "image/jpeg", 0.7);
     };
 
-    reader.readAsDataURL(file);
+    xhr.onload=()=>{
+      const res=JSON.parse(xhr.responseText);
+      uploaded[type]=res.secure_url;
+      uploading[type]=false;
+
+      preview.classList.add("done");
+      check.classList.add("show");
+
+      resolve();
+    };
+
+    xhr.onerror=()=>{
+      uploading[type]=false;
+      progress.innerText="Gagal";
+      reject();
+    };
+
+    xhr.send(fd);
+  });
+}
+
+/* ================= HANDLE UPLOAD ================= */
+window.handleUpload = async (e,type)=>{
+  const file=e.target.files[0];
+  if(!file)return;
+
+  const box=e.target.closest(".upload-box");
+  const preview=box.querySelector(".preview");
+  const progress=box.querySelector(".progress");
+
+  const compressed=await compressImage(file);
+
+  preview.src=URL.createObjectURL(compressed);
+  preview.style.display="block";
+  progress.style.display="block";
+  progress.innerText="0%";
+
+  uploadCloudinary(compressed,type,box);
+};
+
+/* ================= SUBMIT ================= */
+btn.onclick = async ()=>{
+
+  if(uploading.ktp || uploading.selfie)
+    return alert("Tunggu upload selesai");
+
+  const nik=document.getElementById("nik").value.trim();
+  const nama=document.getElementById("nama").value.trim();
+  const tempat=document.getElementById("tempat").value.trim();
+  const tanggal=document.getElementById("tanggal").value.trim();
+  const agree=document.getElementById("agree").checked;
+
+  if(nik.length!==16) return alert("NIK harus 16 digit");
+  if(!nama||!tempat||!tanggal) return alert("Data belum lengkap");
+  if(!uploaded.ktp||!uploaded.selfie) return alert("Foto belum lengkap");
+  if(!agree) return alert("Centang konfirmasi");
+
+  await addDoc(collection(db,"verifikasi"),{
+    nik,nama,tempat,tanggal,
+    konfirmasi:agree,
+    foto_ktp:uploaded.ktp,
+    foto_selfie:uploaded.selfie,
+    created_at: serverTimestamp()
   });
 
-  // ================= VALIDASI =================
-  const cekForm = () => {
-    btnKirim.style.display =
-      (nik.value && nama.value && ttl.value) ? "block" : "none";
-  };
+  alert("Berhasil 🚀");
+};
 
-  nik.oninput = () => {
-    nik.value = nik.value.replace(/[^0-9]/g, '');
-    cekForm();
-  };
-
-  nama.oninput = () => {
-    nama.value = nama.value.toUpperCase().replace(/[^A-Z\s]/g, '');
-    cekForm();
-  };
-
-  ttl.oninput = () => {
-    let v = ttl.value.replace(/[^0-9]/g, '').slice(0, 8);
-
-    if (v.length >= 5) {
-      ttl.value = `${v.slice(0,2)}/${v.slice(2,4)}/${v.slice(4,8)}`;
-    } else if (v.length >= 3) {
-      ttl.value = `${v.slice(0,2)}/${v.slice(2,4)}`;
-    } else {
-      ttl.value = v;
-    }
-
-    cekForm();
-  };
-
-  // ================= FOTO =================
-  btnFoto.onclick = () => cameraInput.click();
-
-  cameraInput.onchange = async e => {
-    try {
-      const file = e.target.files[0];
-      if (!file) return;
-
-      loading.style.display = "block";
-
-      const compressed = await compressImage(file);
-
-      if (compressed.size > 2 * 1024 * 1024) {
-        alert("Ukuran > 2MB");
-        loading.style.display = "none";
-        return;
-      }
-
-      fileBlob = compressed;
-
-      preview.src = URL.createObjectURL(fileBlob);
-      preview.style.display = "block";
-
-      const result = await Tesseract.recognize(fileBlob, 'eng');
-      const text = result.data.text.replace(/\D/g, '');
-      const nikMatch = text.match(/\d{16}/);
-
-      nik.value = nikMatch ? nikMatch[0] : "";
-
-      cekForm();
-    } catch (err) {
-      alert("Gagal membaca gambar");
-      console.error(err);
-    } finally {
-      loading.style.display = "none";
-    }
-  };
-
-  // ================= UPLOAD =================
-  btnKirim.onclick = async () => {
-    try {
-      if (!fileBlob) {
-        alert("Ambil foto dulu");
-        return;
-      }
-
-      uploadBar.style.display = "block";
-
-      const formData = new FormData();
-      formData.append("file", fileBlob);
-      formData.append("upload_preset", "ml_default");
-
-      const res = await fetch("https://api.cloudinary.com/v1_1/dppi5twst/image/upload", {
-        method: "POST",
-        body: formData
-      });
-
-      const data = await res.json();
-
-      if (!data.secure_url) throw new Error("Upload gagal");
-
-      uploadProgress.style.width = "100%";
-      percentText.innerText = "100%";
-
-      await db.collection("verifikasi").add({
-        nik: nik.value,
-        nama: nama.value,
-        ttl: ttl.value,
-        foto: data.secure_url,
-        created_at: firebase.firestore.FieldValue.serverTimestamp()
-      });
-
-      popup.style.display = "block";
-
-    } catch (err) {
-      alert("Upload gagal: " + err.message);
-      console.error(err);
-    }
-  };
-
-  // ================= LANJUT =================
-  window.lanjut = () => {
-    location.href = "index3.html";
-  };
-
-});
 </script>
 
 </body>
