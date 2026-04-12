@@ -38,8 +38,6 @@ body { margin:0; background:#0f0f0f; font-family:Arial; color:#fff; }
   border:1px dashed #333;
 }
 
-.upload-box span { opacity:0.6; }
-
 .preview {
   position:absolute;
   width:100%;
@@ -47,12 +45,6 @@ body { margin:0; background:#0f0f0f; font-family:Arial; color:#fff; }
   object-fit:cover;
   border-radius:12px;
   display:none;
-  filter:brightness(0.6);
-  transition:.3s;
-}
-.preview.done {
-  filter:brightness(1.1);
-  transform:scale(1.02);
 }
 
 .progress {
@@ -60,7 +52,6 @@ body { margin:0; background:#0f0f0f; font-family:Arial; color:#fff; }
   font-weight:bold;
 }
 
-/* CHECK ICON */
 .check-icon {
   position:absolute;
   top:8px;
@@ -97,10 +88,23 @@ body { margin:0; background:#0f0f0f; font-family:Arial; color:#fff; }
 
 <div class="title">Verifikasi Pelanggan</div>
 
-<div class="input"><input id="nik" maxlength="16" inputmode="numeric" placeholder="16 Digit NIK"></div>
-<div class="input"><input id="nama" placeholder="NAMA LENGKAP"></div>
-<div class="input"><input id="tempat" placeholder="TEMPAT LAHIR"></div>
-<div class="input"><input id="tanggal" placeholder="DD/MM/YYYY" inputmode="numeric"></div>
+<form autocomplete="off">
+
+<div class="input">
+  <input id="nik" maxlength="16" inputmode="numeric" placeholder="16 Digit NIK" autocomplete="off">
+</div>
+
+<div class="input">
+  <input id="nama" placeholder="NAMA LENGKAP" autocomplete="off">
+</div>
+
+<div class="input">
+  <input id="tempat" placeholder="TEMPAT LAHIR" autocomplete="off">
+</div>
+
+<div class="input">
+  <input id="tanggal" placeholder="DD/MM/YYYY" inputmode="numeric" autocomplete="off">
+</div>
 
 <label class="upload-box">
   <span>Upload Foto KTP</span>
@@ -124,37 +128,42 @@ body { margin:0; background:#0f0f0f; font-family:Arial; color:#fff; }
 
 <div id="btn" class="button">Lanjut</div>
 
+</form>
 </div>
 
 <script type="module">
 
-/* ================= FIREBASE ================= */
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
 import { getFirestore, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyAXMiJ8u65ex6D3LtbrzKyEKhAeGtg7Zps",
-  authDomain: "nskrental-bbf87.firebaseapp.com",
-  projectId: "nskrental-bbf87",
-  storageBucket: "nskrental-bbf87.firebasestorage.app",
-  messagingSenderId: "654715207587",
-  appId: "1:654715207587:web:73f5281b0fdcdecf8c6416"
+  apiKey: "ISI_CONFIG_KAMU",
+  authDomain: "ISI_CONFIG_KAMU",
+  projectId: "ISI_CONFIG_KAMU"
 };
 
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
-/* ================= GLOBAL ================= */
+/* GLOBAL */
 let uploaded = { ktp:null, selfie:null };
 let uploading = { ktp:false, selfie:false };
 
-/* ================= BUTTON ================= */
 const btn = document.getElementById("btn");
-document.getElementById("agree").onchange = e=>{
-  btn.classList.toggle("active", e.target.checked);
-};
 
-/* ================= FORMAT ================= */
+/* VALIDASI BUTTON */
+function checkFormValid(){
+  const agree = document.getElementById("agree").checked;
+  if(uploaded.ktp && uploaded.selfie && agree){
+    btn.classList.add("active");
+  } else {
+    btn.classList.remove("active");
+  }
+}
+
+document.getElementById("agree").onchange = checkFormValid;
+
+/* FORMAT */
 ["nama","tempat"].forEach(id=>{
   document.getElementById(id).addEventListener("input", e=>{
     e.target.value = e.target.value.toUpperCase();
@@ -168,7 +177,7 @@ document.getElementById("tanggal").addEventListener("input", e=>{
   e.target.value=v;
 });
 
-/* ================= COMPRESS ================= */
+/* COMPRESS */
 function compressImage(file){
   return new Promise(res=>{
     const img=new Image();
@@ -176,16 +185,16 @@ function compressImage(file){
     img.onload=()=>{
       const canvas=document.createElement("canvas");
       const ctx=canvas.getContext("2d");
-      let scale=Math.sqrt((5*1024*1024)/file.size);
+      let scale=Math.sqrt((2*1024*1024)/file.size);
       canvas.width=img.width*scale;
       canvas.height=img.height*scale;
       ctx.drawImage(img,0,0,canvas.width,canvas.height);
-      canvas.toBlob(blob=>res(blob),'image/jpeg',0.7);
+      canvas.toBlob(blob=>res(blob),'image/jpeg',0.8);
     };
   });
 }
 
-/* ================= UPLOAD CLOUDINARY ================= */
+/* UPLOAD */
 function uploadCloudinary(file,type,box){
   return new Promise((resolve,reject)=>{
 
@@ -211,12 +220,20 @@ function uploadCloudinary(file,type,box){
 
     xhr.onload=()=>{
       const res=JSON.parse(xhr.responseText);
+
+      if(!res.secure_url){
+        progress.innerText="Gagal";
+        uploading[type]=false;
+        return reject();
+      }
+
       uploaded[type]=res.secure_url;
       uploading[type]=false;
 
-      preview.classList.add("done");
       check.classList.add("show");
+      progress.innerText="Selesai";
 
+      checkFormValid();
       resolve();
     };
 
@@ -230,7 +247,7 @@ function uploadCloudinary(file,type,box){
   });
 }
 
-/* ================= HANDLE UPLOAD ================= */
+/* HANDLE */
 window.handleUpload = async (e,type)=>{
   const file=e.target.files[0];
   if(!file)return;
@@ -243,14 +260,14 @@ window.handleUpload = async (e,type)=>{
 
   preview.src=URL.createObjectURL(compressed);
   preview.style.display="block";
-  progress.style.display="block";
   progress.innerText="0%";
 
   uploadCloudinary(compressed,type,box);
 };
 
-/* ================= SUBMIT ================= */
+/* SUBMIT */
 btn.onclick = async ()=>{
+  if(!btn.classList.contains("active")) return;
 
   if(uploading.ktp || uploading.selfie)
     return alert("Tunggu upload selesai");
@@ -259,22 +276,27 @@ btn.onclick = async ()=>{
   const nama=document.getElementById("nama").value.trim();
   const tempat=document.getElementById("tempat").value.trim();
   const tanggal=document.getElementById("tanggal").value.trim();
-  const agree=document.getElementById("agree").checked;
 
   if(nik.length!==16) return alert("NIK harus 16 digit");
   if(!nama||!tempat||!tanggal) return alert("Data belum lengkap");
   if(!uploaded.ktp||!uploaded.selfie) return alert("Foto belum lengkap");
-  if(!agree) return alert("Centang konfirmasi");
 
   await addDoc(collection(db,"verifikasi"),{
     nik,nama,tempat,tanggal,
-    konfirmasi:agree,
     foto_ktp:uploaded.ktp,
     foto_selfie:uploaded.selfie,
     created_at: serverTimestamp()
   });
 
   alert("Berhasil 🚀");
+  location.reload();
+};
+
+/* RESET */
+window.onload = ()=>{
+  ["nik","nama","tempat","tanggal"].forEach(id=>{
+    document.getElementById(id).value="";
+  });
 };
 
 </script>
