@@ -6,79 +6,105 @@
 <title>Verifikasi Pelanggan</title>
 
 <style>
-body { margin:0; background:#0f0f0f; font-family:Arial; color:#fff; }
-.container { max-width:420px; margin:auto; padding:20px; }
-.title { text-align:center; font-size:22px; margin-bottom:20px; }
 
-.input {
-  background:#1a1a1a;
-  border-radius:12px;
-  padding:12px;
-  margin-bottom:12px;
-}
-.input input {
-  width:100%;
-  border:none;
-  background:transparent;
-  color:#fff;
-  outline:none;
+body{
+margin:0;
+background:#0f0f0f;
+font-family:Arial;
+color:#fff;
 }
 
-/* UPLOAD */
-.upload-box {
-  height:140px;
-  background:#1a1a1a;
-  border-radius:12px;
-  margin-bottom:12px;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  position:relative;
-  cursor:pointer;
-  border:1px dashed #333;
+.container{
+max-width:420px;
+margin:auto;
+padding:20px;
 }
 
-.preview {
-  position:absolute;
-  width:100%;
-  height:100%;
-  object-fit:cover;
-  border-radius:12px;
-  display:none;
+.title{
+text-align:center;
+font-size:22px;
+margin-bottom:20px;
 }
 
-.progress {
-  position:absolute;
-  font-weight:bold;
+.input{
+background:#1a1a1a;
+border-radius:12px;
+padding:12px;
+margin-bottom:12px;
 }
 
-.check-icon {
-  position:absolute;
-  top:8px;
-  right:8px;
-  background:#00c853;
-  width:22px;
-  height:22px;
-  border-radius:50%;
-  display:none;
-  align-items:center;
-  justify-content:center;
-  font-size:12px;
+.input input{
+width:100%;
+border:none;
+background:transparent;
+color:#fff;
+outline:none;
 }
-.check-icon.show { display:flex; }
 
-/* BUTTON */
-.button {
-  padding:14px;
-  border-radius:12px;
-  text-align:center;
-  background:#333;
-  opacity:.5;
+.upload-box{
+height:150px;
+background:#1a1a1a;
+border-radius:12px;
+margin-bottom:12px;
+display:flex;
+align-items:center;
+justify-content:center;
+position:relative;
+border:1px dashed #444;
+cursor:pointer;
+overflow:hidden;
 }
-.button.active {
-  opacity:1;
-  cursor:pointer;
+
+.preview{
+position:absolute;
+width:100%;
+height:100%;
+object-fit:cover;
+border-radius:12px;
+display:none;
 }
+
+.progress{
+position:absolute;
+font-weight:bold;
+background:rgba(0,0,0,0.6);
+padding:4px 8px;
+border-radius:6px;
+}
+
+.check{
+position:absolute;
+top:8px;
+right:8px;
+background:#00c853;
+width:22px;
+height:22px;
+border-radius:50%;
+display:none;
+align-items:center;
+justify-content:center;
+font-size:12px;
+}
+
+.check.show{
+display:flex;
+}
+
+.button{
+padding:14px;
+border-radius:12px;
+text-align:center;
+background:#333;
+opacity:.5;
+margin-top:10px;
+}
+
+.button.active{
+opacity:1;
+cursor:pointer;
+background:#00c853;
+}
+
 </style>
 </head>
 
@@ -88,216 +114,210 @@ body { margin:0; background:#0f0f0f; font-family:Arial; color:#fff; }
 
 <div class="title">Verifikasi Pelanggan</div>
 
-<form autocomplete="off">
-
 <div class="input">
-  <input id="nik" maxlength="16" inputmode="numeric" placeholder="16 Digit NIK" autocomplete="off">
+<input id="nik" maxlength="16" inputmode="numeric" placeholder="16 Digit NIK">
 </div>
 
 <div class="input">
-  <input id="nama" placeholder="NAMA LENGKAP" autocomplete="off">
+<input id="nama" placeholder="NAMA LENGKAP">
 </div>
 
 <div class="input">
-  <input id="tempat" placeholder="TEMPAT LAHIR" autocomplete="off">
+<input id="tempat" placeholder="TEMPAT LAHIR">
 </div>
 
 <div class="input">
-  <input id="tanggal" placeholder="DD/MM/YYYY" inputmode="numeric" autocomplete="off">
+<input id="tanggal" placeholder="DD/MM/YYYY">
 </div>
 
 <label class="upload-box">
-  <span>Upload Foto KTP</span>
-  <img class="preview">
-  <div class="progress"></div>
-  <div class="check-icon">✔</div>
-  <input type="file" accept="image/*" onchange="handleUpload(event,'ktp')">
+<span>Foto KTP</span>
+<img class="preview">
+<div class="progress"></div>
+<div class="check">✔</div>
+<input type="file" accept="image/*" capture="environment" onchange="handleUpload(event,'ktp')" hidden>
 </label>
 
 <label class="upload-box">
-  <span>Upload Foto Selfie</span>
-  <img class="preview">
-  <div class="progress"></div>
-  <div class="check-icon">✔</div>
-  <input type="file" accept="image/*" onchange="handleUpload(event,'selfie')">
+<span>Selfie</span>
+<img class="preview">
+<div class="progress"></div>
+<div class="check">✔</div>
+<input type="file" accept="image/*" capture="user" onchange="handleUpload(event,'selfie')" hidden>
 </label>
 
-<div style="margin-top:10px;">
-  <input type="checkbox" id="agree"> Semua data sesuai KTP
+<div>
+<input type="checkbox" id="agree"> Semua data sesuai KTP
 </div>
 
 <div id="btn" class="button">Lanjut</div>
 
-</form>
 </div>
 
-<script type="module">
+<script>
 
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { getFirestore, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+const CLOUD_NAME="dppi5twst";
+const UPLOAD_PRESET="verifikasi_upload";
 
-const firebaseConfig = {
-  apiKey: "ISI_CONFIG_KAMU",
-  authDomain: "ISI_CONFIG_KAMU",
-  projectId: "ISI_CONFIG_KAMU"
+let uploaded={
+ktp:null,
+selfie:null
 };
 
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
+const btn=document.getElementById("btn");
 
-/* GLOBAL */
-let uploaded = { ktp:null, selfie:null };
-let uploading = { ktp:false, selfie:false };
+/* cek form */
 
-const btn = document.getElementById("btn");
+function checkForm(){
 
-/* VALIDASI BUTTON */
-function checkFormValid(){
-  const agree = document.getElementById("agree").checked;
-  if(uploaded.ktp && uploaded.selfie && agree){
-    btn.classList.add("active");
-  } else {
-    btn.classList.remove("active");
-  }
+if(uploaded.ktp && uploaded.selfie && document.getElementById("agree").checked){
+btn.classList.add("active");
+}else{
+btn.classList.remove("active");
 }
 
-document.getElementById("agree").onchange = checkFormValid;
+}
 
-/* FORMAT */
+document.getElementById("agree").onchange=checkForm;
+
+/* format huruf */
+
 ["nama","tempat"].forEach(id=>{
-  document.getElementById(id).addEventListener("input", e=>{
-    e.target.value = e.target.value.toUpperCase();
-  });
+document.getElementById(id).addEventListener("input",e=>{
+e.target.value=e.target.value.toUpperCase();
+});
 });
 
-document.getElementById("tanggal").addEventListener("input", e=>{
-  let v=e.target.value.replace(/\D/g,'').slice(0,8);
-  if(v.length>=4) v=v.replace(/(\d{2})(\d{2})(\d+)/,"$1/$2/$3");
-  else if(v.length>=2) v=v.replace(/(\d{2})(\d+)/,"$1/$2");
-  e.target.value=v;
+/* format tanggal */
+
+document.getElementById("tanggal").addEventListener("input",e=>{
+
+let v=e.target.value.replace(/\D/g,'').slice(0,8);
+
+if(v.length>=4)
+v=v.replace(/(\d{2})(\d{2})(\d+)/,"$1/$2/$3");
+else if(v.length>=2)
+v=v.replace(/(\d{2})(\d+)/,"$1/$2");
+
+e.target.value=v;
+
 });
 
-/* COMPRESS */
+/* compress gambar */
+
 function compressImage(file){
-  return new Promise(res=>{
-    const img=new Image();
-    img.src=URL.createObjectURL(file);
-    img.onload=()=>{
-      const canvas=document.createElement("canvas");
-      const ctx=canvas.getContext("2d");
-      let scale=Math.sqrt((2*1024*1024)/file.size);
-      canvas.width=img.width*scale;
-      canvas.height=img.height*scale;
-      ctx.drawImage(img,0,0,canvas.width,canvas.height);
-      canvas.toBlob(blob=>res(blob),'image/jpeg',0.8);
-    };
-  });
+
+return new Promise(resolve=>{
+
+const img=new Image();
+img.src=URL.createObjectURL(file);
+
+img.onload=()=>{
+
+const canvas=document.createElement("canvas");
+const ctx=canvas.getContext("2d");
+
+let max=1280;
+
+let scale=Math.min(max/img.width,max/img.height,1);
+
+canvas.width=img.width*scale;
+canvas.height=img.height*scale;
+
+ctx.drawImage(img,0,0,canvas.width,canvas.height);
+
+canvas.toBlob(blob=>resolve(blob),'image/jpeg',0.8);
+
+};
+
+});
+
 }
 
-/* UPLOAD */
-function uploadCloudinary(file,type,box){
-  return new Promise((resolve,reject)=>{
+/* upload cloudinary */
 
-    const xhr=new XMLHttpRequest();
-    const fd=new FormData();
+async function uploadCloudinary(file,type,box){
 
-    const progress=box.querySelector(".progress");
-    const preview=box.querySelector(".preview");
-    const check=box.querySelector(".check-icon");
+const progress=box.querySelector(".progress");
+const check=box.querySelector(".check");
 
-    fd.append("file",file);
-    fd.append("upload_preset","ml_default");
+progress.innerText="Upload...";
 
-    xhr.open("POST","https://api.cloudinary.com/v1_1/dppi5twst/image/upload");
+const fd=new FormData();
+fd.append("file",file);
+fd.append("upload_preset",UPLOAD_PRESET);
 
-    uploading[type]=true;
+try{
 
-    xhr.upload.onprogress=e=>{
-      if(e.lengthComputable){
-        progress.innerText=Math.round(e.loaded/e.total*100)+"%";
-      }
-    };
+const res=await fetch(
+`https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`,
+{
+method:"POST",
+body:fd
+});
 
-    xhr.onload=()=>{
-      const res=JSON.parse(xhr.responseText);
+const data=await res.json();
 
-      if(!res.secure_url){
-        progress.innerText="Gagal";
-        uploading[type]=false;
-        return reject();
-      }
-
-      uploaded[type]=res.secure_url;
-      uploading[type]=false;
-
-      check.classList.add("show");
-      progress.innerText="Selesai";
-
-      checkFormValid();
-      resolve();
-    };
-
-    xhr.onerror=()=>{
-      uploading[type]=false;
-      progress.innerText="Gagal";
-      reject();
-    };
-
-    xhr.send(fd);
-  });
+if(!data.secure_url){
+console.log(data);
+throw "Upload gagal";
 }
 
-/* HANDLE */
-window.handleUpload = async (e,type)=>{
-  const file=e.target.files[0];
-  if(!file)return;
+uploaded[type]=data.secure_url;
 
-  const box=e.target.closest(".upload-box");
-  const preview=box.querySelector(".preview");
-  const progress=box.querySelector(".progress");
+progress.innerText="Selesai";
+check.classList.add("show");
 
-  const compressed=await compressImage(file);
+checkForm();
 
-  preview.src=URL.createObjectURL(compressed);
-  preview.style.display="block";
-  progress.innerText="0%";
+}catch(err){
 
-  uploadCloudinary(compressed,type,box);
-};
+progress.innerText="Gagal";
+console.log(err);
 
-/* SUBMIT */
-btn.onclick = async ()=>{
-  if(!btn.classList.contains("active")) return;
+}
 
-  if(uploading.ktp || uploading.selfie)
-    return alert("Tunggu upload selesai");
+}
 
-  const nik=document.getElementById("nik").value.trim();
-  const nama=document.getElementById("nama").value.trim();
-  const tempat=document.getElementById("tempat").value.trim();
-  const tanggal=document.getElementById("tanggal").value.trim();
+/* handle upload */
 
-  if(nik.length!==16) return alert("NIK harus 16 digit");
-  if(!nama||!tempat||!tanggal) return alert("Data belum lengkap");
-  if(!uploaded.ktp||!uploaded.selfie) return alert("Foto belum lengkap");
+window.handleUpload=async(e,type)=>{
 
-  await addDoc(collection(db,"verifikasi"),{
-    nik,nama,tempat,tanggal,
-    foto_ktp:uploaded.ktp,
-    foto_selfie:uploaded.selfie,
-    created_at: serverTimestamp()
-  });
+const file=e.target.files[0];
+if(!file)return;
 
-  alert("Berhasil 🚀");
-  location.reload();
-};
+const box=e.target.closest(".upload-box");
+const preview=box.querySelector(".preview");
 
-/* RESET */
-window.onload = ()=>{
-  ["nik","nama","tempat","tanggal"].forEach(id=>{
-    document.getElementById(id).value="";
-  });
-};
+const compressed=await compressImage(file);
+
+preview.src=URL.createObjectURL(compressed);
+preview.style.display="block";
+
+uploadCloudinary(compressed,type,box);
+
+}
+
+/* tombol submit */
+
+btn.onclick=()=>{
+
+if(!btn.classList.contains("active")) return;
+
+const nik=document.getElementById("nik").value.trim();
+const nama=document.getElementById("nama").value.trim();
+const tempat=document.getElementById("tempat").value.trim();
+const tanggal=document.getElementById("tanggal").value.trim();
+
+if(nik.length!==16)
+return alert("NIK harus 16 digit");
+
+if(!nama || !tempat || !tanggal)
+return alert("Data belum lengkap");
+
+alert("Data siap dikirim 🚀");
+
+}
 
 </script>
 
