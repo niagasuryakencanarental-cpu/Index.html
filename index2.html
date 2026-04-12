@@ -1,127 +1,3 @@
-<!DOCTYPE html>
-<html lang="id">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Verifikasi Pelanggan</title>
-
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-storage.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/tesseract.js@4"></script>
-
-<style>
-body{background:#000;color:#fff;font-family:sans-serif;text-align:center;padding:20px}
-
-input,button{
-  width:90%;
-  padding:12px;
-  margin:6px;
-  border-radius:12px;
-  border:none;
-  font-size:16px;
-}
-
-#btnKirim{
-  display:none;
-  background:#fff;
-  color:#000;
-  font-weight:bold;
-  letter-spacing:1px;
-}
-
-#btnFoto{
-  background:#00c896;
-  color:#000;
-  font-weight:bold;
-}
-
-#preview{
-  max-width:90%;
-  margin-top:10px;
-  border-radius:10px;
-  display:none;
-}
-
-#uploadBar{
-  display:none;
-  width:90%;
-  height:10px;
-  background:#333;
-  margin:auto;
-  border-radius:10px;
-  overflow:hidden;
-}
-
-#uploadProgress{
-  height:10px;
-  width:0%;
-  background:#00ffcc;
-}
-
-#percentText{
-  font-size:14px;
-  margin-top:5px;
-}
-
-#loadingScreen{
-position:fixed;
-top:0;left:0;
-width:100%;height:100%;
-background:#000;
-display:none;
-justify-content:center;
-align-items:center;
-flex-direction:column;
-z-index:999;
-}
-
-#popup{
-position:fixed;
-top:0;left:0;
-width:100%;height:100%;
-background:rgba(0,0,0,0.8);
-display:none;
-justify-content:center;
-align-items:center;
-}
-
-#popupBox{
-background:#111;
-padding:20px;
-border-radius:15px;
-width:80%;
-}
-</style>
-</head>
-
-<body>
-
-<h2>Verifikasi Pelanggan</h2>
-
-<button id="btnFoto">Ambil Foto KTP</button>
-<input type="file" id="cameraInput" accept="image/*" capture="environment" hidden>
-
-<img id="preview">
-
-<input id="nik" placeholder="NIK" inputmode="numeric">
-<input id="nama" placeholder="Nama">
-<input id="ttl" placeholder="DD/MM/YYYY" inputmode="numeric">
-
-<button id="btnKirim">KIRIM DATA</button>
-
-<div id="uploadBar"><div id="uploadProgress"></div></div>
-<div id="percentText"></div>
-
-<div id="loadingScreen"><p id="loadingText">Loading...</p></div>
-
-<div id="popup">
-  <div id="popupBox">
-    <p>Data berhasil dikirim</p>
-    <button onclick="lanjut()">Lanjutkan</button>
-  </div>
-</div>
-
 <script>
 
 // FIREBASE
@@ -136,7 +12,6 @@ const firebaseConfig = {
 
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
-const storage = firebase.storage();
 
 // ELEMENT
 const $ = id => document.getElementById(id);
@@ -157,6 +32,43 @@ const loading = $("loadingScreen");
 const popup = $("popup");
 
 let fileBlob = null;
+
+// ================== KOMPRES GAMBAR ==================
+async function compressImage(file){
+  return new Promise((resolve)=>{
+    const img = new Image();
+    const reader = new FileReader();
+
+    reader.onload = e => img.src = e.target.result;
+
+    img.onload = ()=>{
+      const canvas = document.createElement("canvas");
+      const maxWidth = 1280;
+
+      let width = img.width;
+      let height = img.height;
+
+      if(width > maxWidth){
+        height *= maxWidth / width;
+        width = maxWidth;
+      }
+
+      canvas.width = width;
+      canvas.height = height;
+
+      const ctx = canvas.getContext("2d");
+      ctx.drawImage(img, 0, 0, width, height);
+
+      canvas.toBlob(
+        blob => resolve(blob),
+        "image/jpeg",
+        0.7
+      );
+    };
+
+    reader.readAsDataURL(file);
+  });
+}
 
 // VALIDASI FORM
 function cekForm(){
@@ -201,7 +113,17 @@ cameraInput.onchange = async (e)=>{
 
   loading.style.display="flex";
 
-  fileBlob = file;
+  // 🔥 KOMPRES
+  const compressed = await compressImage(file);
+
+  // 🔒 VALIDASI 2MB SETELAH KOMPRES
+  if(compressed.size > 2 * 1024 * 1024){
+    alert("Ukuran setelah kompres masih > 2MB");
+    loading.style.display="none";
+    return;
+  }
+
+  fileBlob = compressed;
 
   preview.src = URL.createObjectURL(fileBlob);
   preview.style.display="block";
@@ -219,7 +141,7 @@ cameraInput.onchange = async (e)=>{
   loading.style.display="none";
 };
 
-// UPLOAD
+// UPLOAD KE CLOUDINARY
 btnKirim.onclick = async ()=>{
   if(!fileBlob){
     alert("Ambil foto dulu");
@@ -228,30 +150,44 @@ btnKirim.onclick = async ()=>{
 
   uploadBar.style.display="block";
 
-  const ref = storage.ref("ktp/ktp_"+Date.now()+".jpg");
-  const uploadTask = ref.put(fileBlob);
+  try{
+    const formData = new FormData();
+    formData.append("file", fileBlob);
+    formData.append("upload_preset", "ml_default");
+    formData.append("cloud_name", "dppi5twst");
 
-  uploadTask.on("state_changed",
-    snap=>{
-      const p = Math.round((snap.bytesTransferred/snap.totalBytes)*100);
-      uploadProgress.style.width = p+"%";
-      percentText.innerText = p + "%";
-    },
-    ()=>alert("Upload gagal"),
-    async ()=>{
-      const url = await ref.getDownloadURL();
+    const res = await fetch("https://api.cloudinary.com/v1_1/dppi5twst/image/upload", {
+      method: "POST",
+      body: formData
+    });
 
-      await db.collection("verifikasi").add({
-        nik: nik.value,
-        nama: nama.value,
-        ttl: ttl.value,
-        foto: url,
-        created_at: new Date()
-      });
+    const data = await res.json();
 
-      popup.style.display="flex";
+    if(data.error){
+      throw new Error(data.error.message);
     }
-  );
+
+    if(!data.secure_url){
+      throw new Error("Upload gagal");
+    }
+
+    uploadProgress.style.width = "100%";
+    percentText.innerText = "100%";
+
+    await db.collection("verifikasi").add({
+      nik: nik.value,
+      nama: nama.value,
+      ttl: ttl.value,
+      foto: data.secure_url,
+      created_at: firebase.firestore.FieldValue.serverTimestamp()
+    });
+
+    popup.style.display="flex";
+
+  }catch(err){
+    alert("Upload gagal: " + err.message);
+    console.error(err);
+  }
 };
 
 // LANJUT
@@ -260,6 +196,3 @@ function lanjut(){
 }
 
 </script>
-
-</body>
-</html>
