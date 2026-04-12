@@ -1,54 +1,54 @@
 <script>
+document.addEventListener("DOMContentLoaded", () => {
 
-// FIREBASE
-const firebaseConfig = {
-  apiKey: "AIzaSyAXMiJ8u65ex6D3LtbrzKyEKhAeGtg7Zps",
-  authDomain: "nskrental-bbf87.firebaseapp.com",
-  projectId: "nskrental-bbf87",
-  storageBucket: "nskrental-bbf87.appspot.com",
-  messagingSenderId: "654715207587",
-  appId: "1:654715207587:web:73f5281b0fdcdecf8c6416"
-};
+  // ================= FIREBASE =================
+  const firebaseConfig = {
+    apiKey: "AIzaSyAXMiJ8u65ex6D3LtbrzKyEKhAeGtg7Zps",
+    authDomain: "nskrental-bbf87.firebaseapp.com",
+    projectId: "nskrental-bbf87",
+    storageBucket: "nskrental-bbf87.appspot.com",
+    messagingSenderId: "654715207587",
+    appId: "1:654715207587:web:73f5281b0fdcdecf8c6416"
+  };
 
-firebase.initializeApp(firebaseConfig);
-const db = firebase.firestore();
+  if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+  const db = firebase.firestore();
 
-// ELEMENT
-const $ = id => document.getElementById(id);
+  // ================= ELEMENT =================
+  const $ = id => document.getElementById(id);
 
-const btnFoto = $("btnFoto");
-const cameraInput = $("cameraInput");
-const preview = $("preview");
-const nik = $("nik");
-const nama = $("nama");
-const ttl = $("ttl");
-const btnKirim = $("btnKirim");
+  const btnFoto = $("btnFoto");
+  const cameraInput = $("cameraInput");
+  const preview = $("preview");
 
-const uploadBar = $("uploadBar");
-const uploadProgress = $("uploadProgress");
-const percentText = $("percentText");
+  const nik = $("nik");
+  const nama = $("nama");
+  const ttl = $("ttl");
+  const btnKirim = $("btnKirim");
 
-const loading = $("loadingScreen");
-const popup = $("popup");
+  const uploadBar = $("uploadBar");
+  const uploadProgress = $("uploadProgress");
+  const percentText = $("percentText");
 
-let fileBlob = null;
+  const loading = $("loadingScreen");
+  const popup = $("popup");
 
-// ================== KOMPRES GAMBAR ==================
-async function compressImage(file){
-  return new Promise((resolve)=>{
+  let fileBlob = null;
+
+  // ================= KOMPRES GAMBAR =================
+  const compressImage = file => new Promise(resolve => {
     const img = new Image();
     const reader = new FileReader();
 
     reader.onload = e => img.src = e.target.result;
 
-    img.onload = ()=>{
+    img.onload = () => {
       const canvas = document.createElement("canvas");
       const maxWidth = 1280;
 
-      let width = img.width;
-      let height = img.height;
+      let { width, height } = img;
 
-      if(width > maxWidth){
+      if (width > maxWidth) {
         height *= maxWidth / width;
         width = maxWidth;
       }
@@ -56,143 +56,122 @@ async function compressImage(file){
       canvas.width = width;
       canvas.height = height;
 
-      const ctx = canvas.getContext("2d");
-      ctx.drawImage(img, 0, 0, width, height);
+      canvas.getContext("2d").drawImage(img, 0, 0, width, height);
 
-      canvas.toBlob(
-        blob => resolve(blob),
-        "image/jpeg",
-        0.7
-      );
+      canvas.toBlob(blob => resolve(blob), "image/jpeg", 0.7);
     };
 
     reader.readAsDataURL(file);
   });
-}
 
-// VALIDASI FORM
-function cekForm(){
-  if(nik.value && nama.value && ttl.value){
-    btnKirim.style.display="block";
-  }else{
-    btnKirim.style.display="none";
-  }
-}
+  // ================= VALIDASI =================
+  const cekForm = () => {
+    btnKirim.style.display =
+      (nik.value && nama.value && ttl.value) ? "block" : "none";
+  };
 
-nik.oninput = ()=>{
-  nik.value = nik.value.replace(/[^0-9]/g,'');
-  cekForm();
-};
+  nik.oninput = () => {
+    nik.value = nik.value.replace(/[^0-9]/g, '');
+    cekForm();
+  };
 
-nama.oninput = ()=>{
-  nama.value = nama.value.toUpperCase().replace(/[^A-Z\s]/g,'');
-  cekForm();
-};
+  nama.oninput = () => {
+    nama.value = nama.value.toUpperCase().replace(/[^A-Z\s]/g, '');
+    cekForm();
+  };
 
-// AUTO FORMAT TTL
-ttl.oninput = ()=>{
-  let v = ttl.value.replace(/[^0-9]/g,'').slice(0,8);
+  ttl.oninput = () => {
+    let v = ttl.value.replace(/[^0-9]/g, '').slice(0, 8);
 
-  if(v.length >= 5){
-    ttl.value = v.slice(0,2)+"/"+v.slice(2,4)+"/"+v.slice(4,8);
-  }else if(v.length >= 3){
-    ttl.value = v.slice(0,2)+"/"+v.slice(2,4);
-  }else{
-    ttl.value = v;
-  }
-
-  cekForm();
-};
-
-// FOTO
-btnFoto.onclick = () => cameraInput.click();
-
-cameraInput.onchange = async (e)=>{
-  const file = e.target.files[0];
-  if(!file) return;
-
-  loading.style.display="flex";
-
-  // 🔥 KOMPRES
-  const compressed = await compressImage(file);
-
-  // 🔒 VALIDASI 2MB SETELAH KOMPRES
-  if(compressed.size > 2 * 1024 * 1024){
-    alert("Ukuran setelah kompres masih > 2MB");
-    loading.style.display="none";
-    return;
-  }
-
-  fileBlob = compressed;
-
-  preview.src = URL.createObjectURL(fileBlob);
-  preview.style.display="block";
-
-  const result = await Tesseract.recognize(fileBlob,'eng',{
-    tessedit_char_whitelist:'0123456789'
-  });
-
-  const text = result.data.text.replace(/\D/g,'');
-  const nikMatch = text.match(/\d{16}/);
-
-  nik.value = nikMatch ? nikMatch[0] : "";
-
-  cekForm();
-  loading.style.display="none";
-};
-
-// UPLOAD KE CLOUDINARY
-btnKirim.onclick = async ()=>{
-  if(!fileBlob){
-    alert("Ambil foto dulu");
-    return;
-  }
-
-  uploadBar.style.display="block";
-
-  try{
-    const formData = new FormData();
-    formData.append("file", fileBlob);
-    formData.append("upload_preset", "ml_default");
-    formData.append("cloud_name", "dppi5twst");
-
-    const res = await fetch("https://api.cloudinary.com/v1_1/dppi5twst/image/upload", {
-      method: "POST",
-      body: formData
-    });
-
-    const data = await res.json();
-
-    if(data.error){
-      throw new Error(data.error.message);
+    if (v.length >= 5) {
+      ttl.value = `${v.slice(0,2)}/${v.slice(2,4)}/${v.slice(4,8)}`;
+    } else if (v.length >= 3) {
+      ttl.value = `${v.slice(0,2)}/${v.slice(2,4)}`;
+    } else {
+      ttl.value = v;
     }
 
-    if(!data.secure_url){
-      throw new Error("Upload gagal");
+    cekForm();
+  };
+
+  // ================= FOTO =================
+  btnFoto.onclick = () => cameraInput.click();
+
+  cameraInput.onchange = async e => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    loading.style.display = "block";
+
+    const compressed = await compressImage(file);
+
+    if (compressed.size > 2 * 1024 * 1024) {
+      alert("Ukuran > 2MB");
+      loading.style.display = "none";
+      return;
     }
 
-    uploadProgress.style.width = "100%";
-    percentText.innerText = "100%";
+    fileBlob = compressed;
 
-    await db.collection("verifikasi").add({
-      nik: nik.value,
-      nama: nama.value,
-      ttl: ttl.value,
-      foto: data.secure_url,
-      created_at: firebase.firestore.FieldValue.serverTimestamp()
-    });
+    preview.src = URL.createObjectURL(fileBlob);
+    preview.style.display = "block";
 
-    popup.style.display="flex";
+    const result = await Tesseract.recognize(fileBlob, 'eng');
+    const text = result.data.text.replace(/\D/g, '');
+    const nikMatch = text.match(/\d{16}/);
 
-  }catch(err){
-    alert("Upload gagal: " + err.message);
-    console.error(err);
-  }
-};
+    nik.value = nikMatch ? nikMatch[0] : "";
 
-// LANJUT
-function lanjut(){
-  window.location.href = "index3.html";
-}
+    cekForm();
+    loading.style.display = "none";
+  };
 
+  // ================= UPLOAD =================
+  btnKirim.onclick = async () => {
+    if (!fileBlob) {
+      alert("Ambil foto dulu");
+      return;
+    }
+
+    uploadBar.style.display = "block";
+
+    try {
+      const formData = new FormData();
+      formData.append("file", fileBlob);
+      formData.append("upload_preset", "ml_default");
+
+      const res = await fetch("https://api.cloudinary.com/v1_1/dppi5twst/image/upload", {
+        method: "POST",
+        body: formData
+      });
+
+      const data = await res.json();
+
+      if (!data.secure_url) throw new Error("Upload gagal");
+
+      uploadProgress.style.width = "100%";
+      percentText.innerText = "100%";
+
+      await db.collection("verifikasi").add({
+        nik: nik.value,
+        nama: nama.value,
+        ttl: ttl.value,
+        foto: data.secure_url,
+        created_at: firebase.firestore.FieldValue.serverTimestamp()
+      });
+
+      popup.style.display = "block";
+
+    } catch (err) {
+      alert("Upload gagal: " + err.message);
+      console.error(err);
+    }
+  };
+
+  // ================= LANJUT =================
+  window.lanjut = () => {
+    location.href = "index3.html";
+  };
+
+});
 </script>
