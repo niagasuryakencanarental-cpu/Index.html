@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Halaman Konfirmasi</title>
+
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+
+  <style>
+    body {
+      margin: 0;
+      background: #0f0f0f;
+      color: #fff;
+      font-family: Arial, sans-serif;
+      padding: 20px;
+    }
+    .container {
+      max-width: 600px;
+      margin: auto;
+      padding: 20px;
+    }
+    .title {
+      text-align: center;
+      font-size: 24px;
+      margin-bottom: 10px;
+    }
+    .label {
+      display: block;
+      margin: 10px 0 4px 0;
+      font-size: 14px;
+      color: #ccc;
+    }
+    .field {
+      position: relative;
+      margin-bottom: 14px;
+    }
+    .field input {
+      width: 100%;
+      padding: 12px;
+      border-radius: 12px;
+      border: 1px solid #333;
+      background: #1a1a1a;
+      color: #fff;
+      outline: none;
+    }
+    .field.readonly input {
+      background: #222;
+      color: #ccc;
+      cursor: not-allowed;
+    }
+    .edit-icon {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: #00c853;
+      color: #000;
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-weight: bold;
+    }
+    .checkbox-container {
+      margin: 20px 0;
+      font-size: 14px;
+      color: #ccc;
+    }
+    .checkbox-container input {
+      margin-right: 8px;
+    }
+    .btn-continue {
+      width: 100%;
+      padding: 14px;
+      border-radius: 12px;
+      border: none;
+      background: #00c853;
+      color: #000;
+      font-weight: bold;
+      margin-top: 20px;
+      cursor: pointer;
+      opacity: .6;
+    }
+    .btn-continue.active {
+      opacity: 1;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="title">Halaman Konfirmasi</div>
+    <div style="text-align:center;color:#ccc;margin-bottom:30px;">
+      Silakan periksa kembali data Anda
+    </div>
+
+    <label class="label">NIK</label>
+    <div class="field">
+      <input id="nik" type="text" maxlength="16" inputmode="numeric" readonly>
+      <div class="edit-icon" onclick="toggleEdit('nik')">✎</div>
+    </div>
+
+    <label class="label">NAMA</label>
+    <div class="field">
+      <input id="nama" type="text" readonly>
+      <div class="edit-icon" onclick="toggleEdit('nama')">✎</div>
+    </div>
+
+    <label class="label">TEMPAT LAHIR</label>
+    <div class="field">
+      <input id="tempat" type="text" readonly>
+      <div class="edit-icon" onclick="toggleEdit('tempat')">✎</div>
+    </div>
+
+    <label class="label">TANGGAL LAHIR</label>
+    <div class="field">
+      <input id="tanggal" type="text" placeholder="DD/MM/YYYY" readonly>
+      <div class="edit-icon" onclick="toggleEdit('tanggal')">✎</div>
+    </div>
+
+    <label class="label">ALAMAT</label>
+    <div class="field">
+      <input id="alamat" type="text" readonly>
+      <div class="edit-icon" onclick="toggleEdit('alamat')">✎</div>
+    </div>
+
+    <div style="display:flex;gap:10px;">
+      <div style="flex:1;">
+        <label class="label">RT</label>
+        <div class="field">
+          <input id="rt" type="text" maxlength="3" inputmode="numeric" readonly>
+          <div class="edit-icon" onclick="toggleEdit('rt')">✎</div>
+        </div>
+      </div>
+      <div style="flex:1;">
+        <label class="label">RW</label>
+        <div class="field">
+          <input id="rw" type="text" maxlength="3" inputmode="numeric" readonly>
+          <div class="edit-icon" onclick="toggleEdit('rw')">✎</div>
+        </div>
+      </div>
+    </div>
+
+    <div style="display:flex;gap:10px;">
+      <div style="flex:1;">
+        <label class="label">KELURAHAN / DESA</label>
+        <div class="field">
+          <input id="kelurahan" type="text" readonly>
+          <div class="edit-icon" onclick="toggleEdit('kelurahan')">✎</div>
+        </div>
+      </div>
+      <div style="flex:1;">
+        <label class="label">KECAMATAN</label>
+        <div class="field">
+          <input id="kecamatan" type="text" readonly>
+          <div class="edit-icon" onclick="toggleEdit('kecamatan')">✎</div>
+        </div>
+      </div>
+    </div>
+
+    <label class="label">KOTA / KABUPATEN</label>
+    <div class="field">
+      <input id="kota" type="text" readonly>
+      <div class="edit-icon" onclick="toggleEdit('kota')">✎</div>
+    </div>
+
+    <div class="checkbox-container">
+      <input type="checkbox" id="agree"> 
+      <span>Silakan klik apabila data sudah sesuai Kartu Identitas.</span>
+    </div>
+
+    <button id="btnSave" class="btn-continue">LANJUTKAN</button>
+  </div>
+
+  <script>
+    // === FIREBASE CONFIG (sama seperti yang kamu pakai) ===
+    const firebaseConfig = {
+      apiKey: "YOUR_API_KEY",
+      authDomain: "YOUR_PROJECT.firebaseapp.com",
+      projectId: "YOUR_PROJECT",
+    };
+
+    if (!firebase.apps.length) {
+      firebase.initializeApp(firebaseConfig);
+    }
+    const db = firebase.firestore();
+
+    // from index2.html
+    const CLOUD_NAME   = sessionStorage.getItem("CLOUD_NAME")   || "YOUR_CLOUD_NAME";
+    const UPLOAD_PRESET= sessionStorage.getItem("UPLOAD_PRESET")|| "verifikasi_upload";
+    const ktpUrl       = sessionStorage.getItem("ktp_url")      || "";
+    const selfieUrl    = sessionStorage.getItem("selfie_url")   || "";
+
+    function toggleEdit(id) {
+      const el = document.getElementById(id);
+      const readOnlyState = el.classList.contains("readonly");
+      el.readonly = readOnlyState;
+      el.classList.toggle("readonly", !readOnlyState);
+    }
+
+    window.onload = () => {
+      // di sini kamu bisa isi placeholder manual, contoh:
+      document.getElementById("nik").value = sessionStorage.getItem("ocr_nik") || "";
+      document.getElementById("nama").value = sessionStorage.getItem("ocr_nama") || "";
+      document.getElementById("tempat").value = sessionStorage.getItem("ocr_tempat") || "";
+      document.getElementById("tanggal").value = sessionStorage.getItem("ocr_tanggal") || "";
+      document.getElementById("alamat").value = sessionStorage.getItem("ocr_alamat") || "";
+      document.getElementById("rt").value = sessionStorage.getItem("ocr_rt") || "";
+      document.getElementById("rw").value = sessionStorage.getItem("ocr_rw") || "";
+      document.getElementById("kelurahan").value = sessionStorage.getItem("ocr_kelurahan") || "";
+      document.getElementById("kecamatan").value = sessionStorage.getItem("ocr_kecamatan") || "";
+      document.getElementById("kota").value = sessionStorage.getItem("ocr_kota") || "";
+
+      // readonly by default
+      ["nik","nama","tempat","tanggal","alamat","rt","rw","kelurahan","kecamatan","kota"]
+        .forEach(id => {
+          const el = document.getElementById(id);
+          if (el) {
+            el.classList.add("readonly");
+            el.readonly = true;
+          }
+        });
+
+      const agreeEl = document.getElementById("agree");
+      const btn = document.getElementById("btnSave");
+      function checkContinue() {
+        btn.classList.toggle("active", agreeEl.checked);
+      }
+      agreeEl.onchange = checkContinue;
+      checkContinue();
+    };
+
+    async function sendToFirestore() {
+      const nik = document.getElementById("nik").value.trim();
+      const nama = document.getElementById("nama").value.trim();
+      const tempat = document.getElementById("tempat").value.trim();
+      const tanggal = document.getElementById("tanggal").value.trim();
+      const alamat = document.getElementById("alamat").value.trim();
+      const rt = document.getElementById("rt").value.trim();
+      const rw = document.getElementById("rw").value.trim();
+      const kelurahan = document.getElementById("kelurahan").value.trim();
+      const kecamatan = document.getElementById("kecamatan").value.trim();
+      const kota = document.getElementById("kota").value.trim();
+
+      if (!nik || nik.length !== 16) return alert("NIK harus 16 digit.");
+      if (!nama || !tempat || !tanggal || !alamat || !kelurahan || !kecamatan || !kota) {
+        return alert("Harap isi semua data.");
+      }
+
+      try {
+        await db.collection("verifikasi_pelanggan").add({
+          nik,
+          nama,
+          tempat,
+          tanggal_lahir: tanggal,
+          alamat,
+          rt,
+          rw,
+          kelurahan,
+          kecamatan,
+          kota,
+          ktp_url: ktpUrl,
+          selfie_url: selfieUrl,
+          timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+        });
+        alert("✅ Data Verifikasi berhasil disimpan ke Firestore.");
+      } catch (err) {
+        console.error("Firestore error:", err);
+        alert("Gagal mengirim data: " + err.message);
+      }
+    }
+
+    document.getElementById("btnSave").onclick = () => {
+      const btn = document.getElementById("btnSave");
+      if (!btn.classList.contains("active")) return;
+      sendToFirestore();
+    };
+  </script>
+</body>
+</html>
