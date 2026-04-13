@@ -1,325 +1,190 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Verifikasi Pelanggan</title>
-
-<style>
-
-body{
-margin:0;
-background:#0f0f0f;
-font-family:Arial;
-color:#fff;
-}
-
-.container{
-max-width:420px;
-margin:auto;
-padding:20px;
-}
-
-.title{
-text-align:center;
-font-size:22px;
-margin-bottom:20px;
-}
-
-.input{
-background:#1a1a1a;
-border-radius:12px;
-padding:12px;
-margin-bottom:12px;
-}
-
-.input input{
-width:100%;
-border:none;
-background:transparent;
-color:#fff;
-outline:none;
-}
-
-.upload-box{
-height:150px;
-background:#1a1a1a;
-border-radius:12px;
-margin-bottom:12px;
-display:flex;
-align-items:center;
-justify-content:center;
-position:relative;
-border:1px dashed #444;
-cursor:pointer;
-overflow:hidden;
-}
-
-.preview{
-position:absolute;
-width:100%;
-height:100%;
-object-fit:cover;
-border-radius:12px;
-display:none;
-}
-
-.progress{
-position:absolute;
-font-weight:bold;
-background:rgba(0,0,0,0.6);
-padding:4px 8px;
-border-radius:6px;
-}
-
-.check{
-position:absolute;
-top:8px;
-right:8px;
-background:#00c853;
-width:22px;
-height:22px;
-border-radius:50%;
-display:none;
-align-items:center;
-justify-content:center;
-font-size:12px;
-}
-
-.check.show{
-display:flex;
-}
-
-.button{
-padding:14px;
-border-radius:12px;
-text-align:center;
-background:#333;
-opacity:.5;
-margin-top:10px;
-}
-
-.button.active{
-opacity:1;
-cursor:pointer;
-background:#00c853;
-}
-
-</style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Verifikasi Pelanggan</title>
+  <style>
+    body {
+      margin: 0;
+      background: #0f0f0f;
+      font-family: Arial, sans-serif;
+      color: #fff;
+      padding: 20px;
+    }
+    .container {
+      max-width: 420px;
+      margin: auto;
+      padding: 20px;
+    }
+    .title {
+      text-align: center;
+      font-size: 22px;
+      margin-bottom: 20px;
+    }
+    .upload-box {
+      height: 150px;
+      background: #1a1a1a;
+      border-radius: 12px;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      border: 1px dashed #444;
+      cursor: pointer;
+      overflow: hidden;
+    }
+    .preview {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      border-radius: 12px;
+      display: none;
+    }
+    .progress {
+      position: absolute;
+      font-weight: bold;
+      background: rgba(0,0,0,0.6);
+      padding: 4px 8px;
+      border-radius: 6px;
+    }
+    .check {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      background: #00c853;
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+    }
+    .check.show {
+      display: flex;
+    }
+    .button {
+      padding: 14px;
+      border-radius: 12px;
+      text-align: center;
+      background: #333;
+      opacity: .5;
+      margin-top: 10px;
+    }
+    .button.active {
+      opacity: 1;
+      cursor: pointer;
+      background: #00c853;
+    }
+  </style>
 </head>
-
 <body>
-
-<div class="container">
-
-<div class="title">Verifikasi Pelanggan</div>
-
-<div class="input">
-<input id="nik" maxlength="16" inputmode="numeric" placeholder="16 Digit NIK">
-</div>
-
-<div class="input">
-<input id="nama" placeholder="NAMA LENGKAP">
-</div>
-
-<div class="input">
-<input id="tempat" placeholder="TEMPAT LAHIR">
-</div>
-
-<div class="input">
-<input id="tanggal" placeholder="DD/MM/YYYY">
-</div>
-
-<label class="upload-box">
-<span>Foto KTP</span>
-<img class="preview">
-<div class="progress"></div>
-<div class="check">✔</div>
-<input type="file" accept="image/*" capture="environment" onchange="handleUpload(event,'ktp')" hidden>
-</label>
-
-<label class="upload-box">
-<span>Selfie</span>
-<img class="preview">
-<div class="progress"></div>
-<div class="check">✔</div>
-<input type="file" accept="image/*" capture="user" onchange="handleUpload(event,'selfie')" hidden>
-</label>
-
-<div>
-<input type="checkbox" id="agree"> Semua data sesuai KTP
-</div>
-
-<div id="btn" class="button">Lanjut</div>
-
-</div>
-
-<script>
-
-const CLOUD_NAME="dppi5twst";
-const UPLOAD_PRESET="verifikasi_upload";
-
-let uploaded={
-ktp:null,
-selfie:null
-};
-
-const btn=document.getElementById("btn");
-
-/* cek form */
-
-function checkForm(){
-
-if(uploaded.ktp && uploaded.selfie && document.getElementById("agree").checked){
-btn.classList.add("active");
-}else{
-btn.classList.remove("active");
-}
-
-}
-
-document.getElementById("agree").onchange=checkForm;
-
-/* format huruf */
-
-["nama","tempat"].forEach(id=>{
-document.getElementById(id).addEventListener("input",e=>{
-e.target.value=e.target.value.toUpperCase();
-});
-});
-
-/* format tanggal */
-
-document.getElementById("tanggal").addEventListener("input",e=>{
-
-let v=e.target.value.replace(/\D/g,'').slice(0,8);
-
-if(v.length>=4)
-v=v.replace(/(\d{2})(\d{2})(\d+)/,"$1/$2/$3");
-else if(v.length>=2)
-v=v.replace(/(\d{2})(\d+)/,"$1/$2");
-
-e.target.value=v;
-
-});
-
-/* compress gambar */
-
-function compressImage(file){
-
-return new Promise(resolve=>{
-
-const img=new Image();
-img.src=URL.createObjectURL(file);
-
-img.onload=()=>{
-
-const canvas=document.createElement("canvas");
-const ctx=canvas.getContext("2d");
-
-let max=1280;
-
-let scale=Math.min(max/img.width,max/img.height,1);
-
-canvas.width=img.width*scale;
-canvas.height=img.height*scale;
-
-ctx.drawImage(img,0,0,canvas.width,canvas.height);
-
-canvas.toBlob(blob=>resolve(blob),'image/jpeg',0.8);
-
-};
-
-});
-
-}
-
-/* upload cloudinary */
-
-async function uploadCloudinary(file,type,box){
-
-const progress=box.querySelector(".progress");
-const check=box.querySelector(".check");
-
-progress.innerText="Upload...";
-
-const fd=new FormData();
-fd.append("file",file);
-fd.append("upload_preset",UPLOAD_PRESET);
-
-try{
-
-const res=await fetch(
-`https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`,
-{
-method:"POST",
-body:fd
-});
-
-const data=await res.json();
-
-if(!data.secure_url){
-console.log(data);
-throw "Upload gagal";
-}
-
-uploaded[type]=data.secure_url;
-
-progress.innerText="Selesai";
-check.classList.add("show");
-
-checkForm();
-
-}catch(err){
-
-progress.innerText="Gagal";
-console.log(err);
-
-}
-
-}
-
-/* handle upload */
-
-window.handleUpload=async(e,type)=>{
-
-const file=e.target.files[0];
-if(!file)return;
-
-const box=e.target.closest(".upload-box");
-const preview=box.querySelector(".preview");
-
-const compressed=await compressImage(file);
-
-preview.src=URL.createObjectURL(compressed);
-preview.style.display="block";
-
-uploadCloudinary(compressed,type,box);
-
-}
-
-/* tombol submit */
-
-btn.onclick=()=>{
-
-if(!btn.classList.contains("active")) return;
-
-const nik=document.getElementById("nik").value.trim();
-const nama=document.getElementById("nama").value.trim();
-const tempat=document.getElementById("tempat").value.trim();
-const tanggal=document.getElementById("tanggal").value.trim();
-
-if(nik.length!==16)
-return alert("NIK harus 16 digit");
-
-if(!nama || !tempat || !tanggal)
-return alert("Data belum lengkap");
-
-alert("Data siap dikirim 🚀");
-
-}
-
-</script>
-
+  <div class="container">
+    <div class="title">Verifikasi Pelanggan</div>
+
+    <label class="upload-box">
+      <span>Foto KTP</span>
+      <img class="preview">
+      <div class="progress"></div>
+      <div class="check">✔</div>
+      <input type="file" accept="image/*" capture="environment" onchange="handleUpload(event,'ktp')" hidden>
+    </label>
+
+    <label class="upload-box">
+      <span>Selfie</span>
+      <img class="preview">
+      <div class="progress"></div>
+      <div class="check">✔</div>
+      <input type="file" accept="image/*" capture="user" onchange="handleUpload(event,'selfie')" hidden>
+    </label>
+
+    <div id="btnKirim" class="button">Kirim</div>
+  </div>
+
+  <script>
+    const CLOUD_NAME = "YOUR_CLOUD_NAME";   // misal: dppi5twst
+    const UPLOAD_PRESET = "verifikasi_upload";
+
+    let uploaded = { ktp: null, selfie: null };
+    const btnKirim = document.getElementById("btnKirim");
+
+    async function compressImage(file) {
+      return new Promise(resolve => {
+        const img = new Image();
+        img.src = URL.createObjectURL(file);
+        img.onload = () => {
+          const canvas = document.createElement("canvas");
+          const ctx = canvas.getContext("2d");
+          const max = 1280;
+          const scale = Math.min(max / img.width, max / img.height, 1);
+          canvas.width = img.width * scale;
+          canvas.height = img.height * scale;
+          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+          canvas.toBlob(blob => resolve(blob), 'image/jpeg', 0.8);
+        };
+      });
+    }
+
+    async function uploadCloudinary(file, type, box) {
+      const progress = box.querySelector(".progress");
+      const check = box.querySelector(".check");
+      progress.innerText = "Upload...";
+
+      const fd = new FormData();
+      fd.append("file", file);
+      fd.append("upload_preset", UPLOAD_PRESET);
+
+      try {
+        const res = await fetch(
+          `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`, {
+          method: "POST",
+          body: fd
+        });
+        const data = await res.json();
+        if (!data.secure_url) throw "Upload gagal";
+        uploaded[type] = data.secure_url;
+        progress.innerText = "Selesai";
+        check.classList.add("show");
+        checkKirim();
+      } catch (err) {
+        progress.innerText = "Gagal";
+        console.log(err);
+      }
+    }
+
+    window.handleUpload = async (e, type) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const box = e.target.closest(".upload-box");
+      const preview = box.querySelector(".preview");
+      const compressed = await compressImage(file);
+      preview.src = URL.createObjectURL(compressed);
+      preview.style.display = "block";
+      await uploadCloudinary(compressed, type, box);
+    };
+
+    function checkKirim() {
+      if (uploaded.ktp && uploaded.selfie) {
+        btnKirim.classList.add("active");
+      } else {
+        btnKirim.classList.remove("active");
+      }
+    }
+
+    btnKirim.onclick = () => {
+      if (!btnKirim.classList.contains("active")) return;
+
+      // simpan ke sessionStorage untuk index3.html
+      sessionStorage.setItem("CLOUD_NAME", CLOUD_NAME);
+      sessionStorage.setItem("UPLOAD_PRESET", UPLOAD_PRESET);
+      sessionStorage.setItem("ktp_url", uploaded.ktp || "");
+      sessionStorage.setItem("selfie_url", uploaded.selfie || "");
+
+      window.location.href = "index3.html";
+    };
+  </script>
 </body>
 </html>
